@@ -1,0 +1,6 @@
+[templates]
+waybar.template = 'waybar-colors.css'
+waybar.target = '~/.config/waybar/colors.css'
+
+swaync.template = 'waybar-colors.css'
+swaync.target = '~/.config/swaync/colors.css'

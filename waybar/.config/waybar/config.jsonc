@@ -1,0 +1,222 @@
+{
+  // Bar geometry: one bar, on DP-3 only
+  "output": "DP-3",
+  "exclusive": true,
+  "reload_style_on_change": true,
+  "position": "top",
+  "passthrough": false,
+  "gtk-layer-shell": true,
+  "margin-top": 0,
+  "margin-bottom": 0,
+  // Minimum width: Waybar expands to fit the modules (content decides the rest)
+  "width": 500,
+
+  "modules-left": [
+    "custom/weather",
+    "custom/sep-dot",
+    "clock",
+    "custom/sep-dot",
+    "custom/mpris",
+    "custom/sep-dot",
+    "hyprland/workspaces"
+  ],
+
+  "modules-right": [
+    "pulseaudio",
+    "network",
+    "custom/seed4",
+    "cpu",
+    "bluetooth",
+    "custom/updates",
+    "custom/recorder",
+    "idle_inhibitor",
+    "power-profiles-daemon",
+    "custom/sep",
+    "group/tray-expander",
+    "custom/power"
+  ],
+
+  "hyprland/workspaces": {
+    "disable-scroll": true,
+    "all-outputs": true,
+    "cursor": true,
+    "format": "{icon}",
+    "format-icons": {
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5",
+      "6": "6",
+      "7": "7",
+      "8": "8",
+      "9": "9",
+      "10": "10"
+    }
+  },
+
+  "custom/sep": {
+    "format": "|",
+    "tooltip": false
+  },
+
+  "custom/sep-dot": {
+    "format": "•",
+    "tooltip": false
+  },
+
+  "custom/weather": {
+    "format": "{}°",
+    "tooltip": true,
+    "interval": 60,
+    "exec": "wttrbar --location '28.133528,76.7542707' --nerd",
+    "return-type": "json"
+  },
+
+  "custom/power": {
+    "format": "",
+    "on-click": "pkill wlogout || wlogout",
+    "tooltip-format": "Power menu"
+  },
+
+  "power-profiles-daemon": {
+    "format": "{icon}",
+    "tooltip-format": "Power profile: {profile}\nDriver: {driver}",
+    "tooltip": true,
+    "format-icons": {
+      "performance": "",
+      "balanced": " ",
+      "power-saver": ""
+    }
+  },
+
+  "cpu": {
+    "interval": 5,
+    "format": "",
+    "on-click": "kitty -e btop",
+    "states": {
+      "warning": 50,
+      "critical": 80
+    }
+  },
+
+  "clock": {
+    "format": "<span color='#df6124'>{0:%H:%M:%S}</span> <span size='small' color='#616367'><i>{0:%a, %b %d}</i></span>",
+    "format-alt": "{:L%d %B W%V %Y}",
+    "interval": 1,
+    "tooltip-format": "<span>{calendar}</span>",
+    "calendar": {
+      "mode": "month",
+      "mode-mon-col": 3,
+      "on-click-right": "mode",
+      "format": {
+        "month": "<span color='#ffead3'><b>{}</b></span>",
+        "weekdays": "<span color='#ffcc66'><b>{}</b></span>",
+        "today": "<span color='#ff6699'><b>{}</b></span>"
+      }
+    }
+  },
+
+  "network": {
+    "format": "󰤭",
+    "format-icons": ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"],
+    "format-wifi": "{icon} {essid}",
+    "format-ethernet": "󰈀",
+    "format-disconnected": "󰤭",
+    "tooltip-format-wifi": "{essid} ({frequency} GHz)\n⇣{bandwidthDownBytes}  ⇡{bandwidthUpBytes}",
+    "tooltip-format-ethernet": "⇣{bandwidthDownBytes}  ⇡{bandwidthUpBytes}",
+    "tooltip-format-disconnected": "Disconnected",
+    "interval": 3,
+    "spacing": 1,
+    "on-click": "nm-connection-editor"
+  },
+
+  "custom/seed4": {
+    "exec": "$HOME/.local/bin/seed4 waybar",
+    "return-type": "json",
+    "interval": 2,
+    "tooltip": true,
+    "on-click": "$HOME/.local/bin/seed4-toggle",
+    "on-click-right": "$HOME/.local/bin/seed4 menu",
+    "on-click-middle": "$HOME/.local/bin/seed4 notify-status"
+  },
+
+  "bluetooth": {
+    "format": "{num_connections}",
+    "format-disabled": "󰂲 {status}",
+    "format-connected": "󰂱 {num_connections}",
+    "tooltip-format": "Devices connected: {num_connections}",
+    "on-click": "blueman-manager"
+  },
+
+  "pulseaudio": {
+    "format": "{icon} {volume}%",
+    "on-click": "pavucontrol",
+    "on-click-right": "pamixer -t",
+    "tooltip-format": "Playing at {volume}%",
+    "scroll-step": 5,
+    "format-muted": "",
+    "format-icons": {
+      "headphone": "",
+      "headset": "",
+      "default": ["", "", ""]
+    }
+  },
+
+  "custom/mpris": {
+    "exec": "python3 -u $HOME/.config/waybar/scrolling-mpris.py",
+    "format": "{text}",
+    "return-type": "json",
+    "on-click": "playerctl play-pause",
+    "tooltip": false
+  },
+
+  "idle_inhibitor": {
+    "format": "{icon}",
+    "tooltip-format-activated": "Stay Awake: ON",
+    "tooltip-format-deactivated": "Stay Awake: OFF",
+    "format-icons": {
+      "activated": "󰛨",
+      "deactivated": "󰛩"
+    }
+  },
+
+  "custom/updates": {
+    "format": "{} 󰏖",
+    "tooltip": true,
+    "tooltip-format": "{} package updates",
+    "interval": 3600,
+    "exec-if": "checkupdates | grep -q .",
+    "exec": "checkupdates | wc -l | tr -d ' '",
+    "on-click": "kitty -e sudo pacman -Syu"
+  },
+
+  "group/tray-expander": {
+    "orientation": "inherit",
+    "drawer": {
+      "transition-duration": 600,
+      "children-class": "tray-group-item"
+    },
+    "modules": [
+      "custom/expand-icon",
+      "tray"
+    ]
+  },
+
+  "custom/expand-icon": {
+    "format": "",
+    "tooltip": false
+  },
+
+  "tray": {
+    "icon-size": 13,
+    "spacing": 2
+  },
+
+  "custom/recorder": {
+    "exec": "$HOME/.local/bin/gsr-status",
+    "return-type": "json",
+    "interval": 2,
+    "on-click": "$HOME/.local/bin/gsr-toggle"
+  }
+}

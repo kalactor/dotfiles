@@ -1,0 +1,35 @@
+#!/bin/bash
+# usage: wall next | prev | random | set FILE | pick
+DIR="$HOME/Pictures/walls"
+FIT="cover"
+THUMBS=true     # true = rofi shows image previews, false = plain text list (faster on big folders)
+
+mapfile -t files < <(find "$DIR" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' -o -iname '*.jxl' \) | sort)
+n=${#files[@]}
+[ "$n" -eq 0 ] && { notify-send "wall" "No wallpapers in $DIR"; exit 1; }
+
+set_wall() {
+	hyprctl hyprpaper wallpaper ",$1,$FIT";
+	wallust run "$1" >/dev/null 2>&1
+}
+
+cur=$(hyprctl hyprpaper listactive | head -n1 | sed 's/^[^:]*: *//')
+idx=-1
+for i in "${!files[@]}"; do [ "${files[$i]}" = "$cur" ] && idx=$i && break; done
+
+case "$1" in
+  next)   set_wall "${files[$(( (idx + 1) % n ))]}" ;;
+  prev)   set_wall "${files[$(( (idx - 1 + n) % n ))]}" ;;
+  random) set_wall "${files[RANDOM % n]}" ;;
+  set)
+    [ -f "$2" ] && set_wall "$(realpath "$2")" || echo "usage: wall set /path/to/image" ;;
+  pick)
+    if $THUMBS; then
+      sel=$(for f in "${files[@]}"; do printf '%s\0icon\x1f%s\n' "${f#$DIR/}" "$f"; done \
+            | rofi -dmenu -i -show-icons -p "Wallpaper") || exit
+    else
+      sel=$(printf '%s\n' "${files[@]#$DIR/}" | rofi -dmenu -i -p "Wallpaper") || exit
+    fi
+    [ -n "$sel" ] && set_wall "$DIR/$sel" ;;
+  *) echo "usage: wall next|prev|random|set FILE|pick" ;;
+esac

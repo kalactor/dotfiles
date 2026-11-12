@@ -1,0 +1,14 @@
+android-studio
+google-chrome
+hopper
+kiro-ide
+mdv
+nectarlink-bin
+opencode-beta
+openvpn-xor
+openvpn-xor-debug
+wallust
+wlogout
+wttrbar
+yay
+yay-debug

@@ -1,0 +1,102 @@
+configuration {
+    modi: "drun,run,window";
+    show-icons: true;
+    drun-display-format: "{name}";
+    display-drun: "󰀻  Apps";
+    display-run: "󰆍  Run";
+    display-window: "󰖯  Windows";
+    font: "JetBrainsMono Nerd Font 11";
+    matching: "fuzzy";
+    sort: true;
+}
+
+* {
+    bg: #11111bcc;
+    bg-alt: #24243acc;
+    fg: #e6e6f0;
+    muted: #9394aa;
+    purple: #cba6f7;
+    pink: #f5c2e7;
+    blue: #89b4fa;
+
+    background-color: transparent;
+    text-color: @fg;
+}
+
+window {
+    width: 40%;
+    location: center;
+    anchor: center;
+    border: 2px;
+    border-color: #cba6f780;
+    border-radius: 20px;
+    background-color: @bg;
+    padding: 8px;
+}
+
+mainbox {
+    padding: 16px;
+    spacing: 14px;
+    background-color: transparent;
+    children: [ inputbar, listview ];
+}
+
+inputbar {
+    padding: 14px 16px;
+    spacing: 12px;
+    border: 1px;
+    border-color: #cba6f740;
+    border-radius: 14px;
+    background-color: @bg-alt;
+    children: [ prompt, entry ];
+}
+
+prompt {
+    text-color: @purple;
+    background-color: transparent;
+}
+
+entry {
+    text-color: @fg;
+    placeholder: "Search something...";
+    placeholder-color: @muted;
+    background-color: transparent;
+}
+
+listview {
+    columns: 1;
+    lines: 7;
+    spacing: 7px;
+    fixed-height: true;
+    scrollbar: false;
+    background-color: transparent;
+}
+
+element {
+    padding: 11px 13px;
+    border-radius: 12px;
+    background-color: transparent;
+}
+
+element normal.normal {
+    background-color: transparent;
+    text-color: @fg;
+}
+
+element selected.normal {
+    background-color: #cba6f730;
+    text-color: @purple;
+    border: 1px;
+    border-color: #cba6f770;
+}
+
+element-icon {
+    size: 28px;
+    background-color: transparent;
+    margin: 0px 12px 0px 0px;
+}
+
+element-text {
+    background-color: transparent;
+    vertical-align: 0.5;
+}

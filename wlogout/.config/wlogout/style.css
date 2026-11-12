@@ -1,0 +1,96 @@
+/*
+ * wlogout — Arch + Hyprland
+ * Dark glass / cool-violet accent
+ *
+ * Install as ~/.config/wlogout/style.css
+ */
+
+* {
+    background-image: none;
+    box-shadow: none;
+    text-shadow: none;
+    outline: none;
+}
+
+window {
+    background-color: rgba(10, 12, 20, 0.78);
+}
+
+/* Individual action tiles */
+button {
+    color: #e6e9f2;
+    background-color: rgba(25, 29, 43, 0.94);
+
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 22px;
+
+    min-width: 176px;
+    min-height: 154px;
+    margin: 8px;
+    padding: 18px;
+
+    font-family: "Inter", "Noto Sans", sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+
+    background-repeat: no-repeat;
+    background-position: center 34%;
+    background-size: 30%;
+}
+
+/* Keep labels readable beneath the icon */
+button label {
+    color: #e6e9f2;
+    margin-top: 76px;
+}
+
+/* Hover / keyboard focus */
+button:hover,
+button:focus {
+    color: #ffffff;
+    background-color: rgba(55, 48, 92, 0.98);
+    border-color: rgba(167, 139, 250, 0.85);
+}
+
+button:active {
+    background-color: rgba(124, 92, 210, 0.95);
+    border-color: #c4b5fd;
+}
+
+/* Action icons — use the standard wlogout icon locations */
+#lock {
+    background-image: image(url("/usr/share/wlogout/icons/lock.png"), url("/usr/local/share/wlogout/icons/lock.png"));
+}
+
+#suspend {
+    background-image: image(url("/usr/share/wlogout/icons/suspend.png"), url("/usr/local/share/wlogout/icons/suspend.png"));
+}
+
+#hibernate {
+    background-image: image(url("/usr/share/wlogout/icons/hibernate.png"), url("/usr/local/share/wlogout/icons/hibernate.png"));
+}
+
+#logout {
+    background-image: image(url("/usr/share/wlogout/icons/logout.png"), url("/usr/local/share/wlogout/icons/logout.png"));
+}
+
+#reboot {
+    background-image: image(url("/usr/share/wlogout/icons/reboot.png"), url("/usr/local/share/wlogout/icons/reboot.png"));
+}
+
+#shutdown {
+    background-image: image(url("/usr/share/wlogout/icons/shutdown.png"), url("/usr/local/share/wlogout/icons/shutdown.png"));
+}
+
+/* Give destructive power actions a subtle warm hover */
+#shutdown:hover,
+#shutdown:focus {
+    background-color: rgba(91, 39, 55, 0.98);
+    border-color: rgba(251, 113, 133, 0.85);
+}
+
+#reboot:hover,
+#reboot:focus {
+    background-color: rgba(76, 54, 39, 0.98);
+    border-color: rgba(251, 191, 36, 0.8);
+}
