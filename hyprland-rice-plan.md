@@ -250,7 +250,7 @@ require("autostart")
 ### Phase 3: Desktop shell components
 **Bar: Waybar**
 - [x] Waybar running with the pulseaudio module (muted state styled)
-- [~] Full module layout exists, but it is **Omarchy-derived**: `omarchy-*` commands and `$OMARCHY_PATH` are missing, so `custom/voxtype`, `custom/idle-indicator`, `custom/notification-silencing-indicator`, `custom/screenrecording-indicator` are dead; `waybar-module-pacman-updates` missing; `battery`/`backlight` are desktop-irrelevant. Clean this up
+- [x] Omarchy leftovers removed (2026-11-12): dead `custom/voxtype`, `custom/idle-indicator`, `custom/notification-silencing-indicator`, `custom/screenrecording-indicator` and unused `custom/update` deleted; `battery`/`backlight` dropped (desktop); `custom/updatespacman` replaced by `custom/updates` using `checkupdates`; separators renamed to `custom/sep` / `custom/sep-dot`; no `omarchy` or `$OMARCHY_PATH` references remain
 - [x] **Waybar only on `DP-3`** (locked): `config.jsonc` has `"output": "DP-3"`; do not run a bar on `HDMI-A-1`
 - [x] `colors.css` import and `@define-color`; **but** `@red` is mapped to `@color3` (dynamic), not fixed
 - [ ] Waybar start/reload handled by one script (`pkill -SIGUSR2 waybar`)
