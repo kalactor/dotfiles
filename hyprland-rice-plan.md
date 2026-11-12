@@ -68,7 +68,7 @@
 | 7 | **Keybind map differs from the old plan** | Actual lock is `Super+L` (not `Super+Shift+L`); power menu is `Super+Backspace` -> wlogout (not `Super+Escape`); no DND bind | Use section 6 below |
 | 8 | **Theming is only partial** | wallust has 2 targets (Waybar, SwayNC); Hyprland, rofi, kitty, hyprlock, GTK, Qt, vim and SDDM are hardcoded/unthemed | Add templates + `theme-apply` |
 | 9 | **Semantic red is dynamic** | `waybar/style.css` has `@define-color red @color3` | Use a fixed red for muted/errors |
-| 10 | **No dotfiles safety net** | `~/dotfiles` contains only this plan and is not a git repo; configs are real directories, not stowed; no package lists; ext4 with no snapshots/backups | Phase 0 |
+| 10 | **No dotfiles safety net** | **Resolved 2026-11-12:** `~/dotfiles` is a git repo; configs are stowed; package lists and `system/etc/` copies saved | Phase 0 done |
 | 11 | **Missing utilities** | `cliphist`, `hyprpicker`, `hyprsunset`, `swayosd`, `ddcutil`, `qt6ct`, `kvantum`, `nwg-look`, `papirus-icon-theme`, `noto-fonts-cjk`, `fzf`, `zoxide`, `eza`, `bat`, `btop`, `cava`, `hyprshutdown`, `waybar-module-pacman-updates` | Install only what each phase needs |
 | 12 | **SDDM is unthemed** | No `/etc/sddm.conf` or `/etc/sddm.conf.d`; log says "Loaded empty theme configuration"; X11 greeter; only `elarun`, `maldives`, `maya` themes installed; `weston` absent | Choose a theme; keep X11 greeter or install `weston` for a Wayland greeter |
 | 13 | **GTK/Qt/fonts are not unified** | gsettings is `Adwaita`/`default`; `~/.config/gtk-3.0` and `gtk-4.0` are empty; no Qt platform theme; Waybar/rofi use JetBrainsMono, kitty uses CaskaydiaCove, GTK uses Adwaita Sans | Phase 4 static choices |
@@ -194,17 +194,18 @@ require("autostart")
 - [x] NVIDIA driver and DRM modesetting configured (`nvidia-open 615.78.08`, `nvidia_drm.modeset=Y`, `nvidia-smi` works)
 - [x] System updated: running kernel `7.2.15-arch1-1` matches installed `linux 7.2.15.arch1-1` (verify with `pacman -Syu` before the next phase)
 - [x] AUR helper installed (`yay 13.1.0`; `paru` not installed)
-- [~] `git` + `stow` installed; `~/dotfiles` is **not** a git repo yet (it contains only this plan)
-- [ ] `~/dotfiles` initialized with `git init` and first commit
-- [~] `~/.local/bin` is on `PATH`, but **last**; `command -v wall` resolves to `/usr/bin/wall` (collision). Fix PATH order or rename the script (section 5)
-- [ ] Move existing configs into `~/dotfiles` and stow them (section 8)
-- [ ] `.gitignore` for generated files (`colors.css`, `colors.lua`, `colors.rasi`, caches) and secrets
-- [ ] Package list saved: `pacman -Qqen > pkglists/native.txt`, `pacman -Qqem > pkglists/aur.txt` (current counts: 101 native / 14 AUR)
+- [x] `git` + `stow` installed; `~/dotfiles` initialized as a git repo (branch `main`, 3 commits)
+- [x] `~/dotfiles` initialized with `git init` and first commit
+- [x] `~/.local/bin` moved **before** `/usr/bin` in `~/.bashrc`; `command -v wall` now resolves to `~/.local/bin/wall` (collision fixed)
+- [x] Existing configs moved into `~/dotfiles` and stowed: `hypr`, `waybar`, `kitty`, `swaync`, `rofi`, `wallust`, `swayimg`, `wlogout`, `vim`, `bash`, `bin` (custom scripts)
+- [x] `.gitignore` for generated files (`colors.css`, `colors.lua`, `colors.rasi`, caches) and secrets
+- [x] Package lists saved: `pkglists/native.txt` (123) and `pkglists/aur.txt` (14)
 - [ ] Optional pacman hook that refreshes the package lists after every install/remove
-- [ ] Snapshots or backups: root is **ext4**, so no btrfs snapshots; no `timeshift`, `snapper`, `restic`, `borg` or `rsync` installed. Pick rsync/restic to an external disk
-- [ ] Mirror maintenance (`reflector` timer) and cache cleaning (`paccache.timer`) — neither installed
+- [x] Snapshots/backups: **skipped by decision (2026-11-12)** — home PC, no external disk; git covers the rice
+- [x] Mirror maintenance (`reflector.timer`) and cache cleaning (`paccache.timer`) — both installed, enabled and active
+- [x] System config copies kept in `system/etc/` (`fstab`, `mkinitcpio.conf`, `pacman.conf`, `mirrorlist`, `locale.conf`, `vconsole.conf`)
 - [x] Nerd Font installed (`ttf-jetbrains-mono-nerd` + `ttf-cascadia-code-nerd`)
-- [~] Fonts: `noto-fonts`, `noto-fonts-emoji`, `inter-font` installed; **`noto-fonts-cjk` missing**
+- [x] Fonts: `noto-fonts`, `noto-fonts-emoji`, `noto-fonts-cjk`, `inter-font` installed
 - [x] Timezone, locale and NTP correct (`Asia/Kolkata`, `en_IN.UTF-8`, NTP active)
 - [x] `zram-generator` active (4 GiB zram swap)
 - [ ] Optional firewall (`ufw` missing; `nftables`/`iptables` installed but inactive)
@@ -550,7 +551,7 @@ systemctl --user is-failed hyprpolkitagent xdg-desktop-portal-hyprland 2>/dev/nu
 
 ## 8. Dotfiles with Stow (quick start)
 
-> Current state (2026-11-12): `~/dotfiles` contains only this plan and is **not** a git repo. Configs are real directories, not symlinks. The commands below are the target for Phase 0, not done yet.
+> Current state (2026-11-12): **done**. `~/dotfiles` is a git repo on branch `main`; the configs below are stowed and `~/.config/<app>` are symlinks into the repo. New packages are added with `stow <pkg>`.
 
 ```bash
 mkdir -p ~/dotfiles && cd ~/dotfiles && git init
