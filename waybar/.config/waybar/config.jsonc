@@ -22,6 +22,7 @@
   ],
 
   "modules-right": [
+    "custom/mode",
     "pulseaudio",
     "network",
     "custom/seed4",
@@ -71,6 +72,15 @@
     "interval": 60,
     "exec": "wttrbar --location '28.133528,76.7542707' --nerd",
     "return-type": "json"
+  },
+
+  "custom/mode": {
+    "exec": "$HOME/.local/bin/rice-mode waybar",
+    "interval": 60,
+    "return-type": "json",
+    "tooltip": true,
+    "on-click": "$HOME/.local/bin/rice-mode toggle",
+    "on-click-right": "$HOME/.local/bin/rice-mode auto"
   },
 
   "custom/power": {

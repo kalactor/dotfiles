@@ -11,7 +11,7 @@ for c in hyprctl waybar swaync swaync-client rofi wlogout wallust hyprpaper \
          hyprlock hypridle sddm kitty vim grim slurp satty wl-copy cliphist \
          gpu-screen-recorder swayimg jq notify-send powerprofilesctl pamixer \
          gnome-keyring-daemon hyprsunset swayosd-server ddcutil hyprpicker \
-         qt6ct kvantummanager btop cava rice-gtk-reload; do
+         qt6ct kvantummanager btop cava rice-gtk-reload rice-mode wall theme-apply; do
     command -v "$c" >/dev/null 2>&1 && ok "$c" || bad "$c missing"
 done
 
@@ -22,6 +22,8 @@ done
 for s in NetworkManager bluetooth cups; do
     systemctl is-active --quiet "$s" && ok "system/$s" || bad "system/$s inactive"
 done
+systemctl --user is-active --quiet rice-sun.timer && ok "user/rice-sun.timer active" || bad "user/rice-sun.timer inactive"
+systemctl --user is-enabled --quiet rice-sun.timer && ok "user/rice-sun.timer enabled" || warn "user/rice-sun.timer not enabled"
 
 echo "Processes:"
 for p in Hyprland waybar swaync hyprpaper hypridle; do
@@ -74,10 +76,46 @@ done
 [ -L "$HOME/.vimrc" ] && ok "~/.vimrc -> $(readlink "$HOME/.vimrc")" || bad "~/.vimrc is not a symlink"
 [ -L "$HOME/.config/mpv/mpv.conf" ] && ok "~/.config/mpv/mpv.conf -> $(readlink "$HOME/.config/mpv/mpv.conf")" || bad "~/.config/mpv/mpv.conf is not a symlink"
 [ -L "$HOME/.config/chrome-flags.conf" ] && ok "~/.config/chrome-flags.conf -> $(readlink "$HOME/.config/chrome-flags.conf")" || bad "~/.config/chrome-flags.conf is not a symlink"
+[ -L "$HOME/.config/systemd/user/rice-sun.service" ] && ok "~/.config/systemd/user/rice-sun.service" || bad "rice-sun.service is not a symlink"
+[ -L "$HOME/.config/systemd/user/rice-sun.timer" ] && ok "~/.config/systemd/user/rice-sun.timer" || bad "rice-sun.timer is not a symlink"
+[ -L "$HOME/.local/bin/rice-mode" ] && ok "~/.local/bin/rice-mode" || bad "~/.local/bin/rice-mode is not a symlink"
 
 echo "Wallpaper state:"
 if [ -L "$HOME/.cache/rice/wallpaper" ] && [ -f "$HOME/.cache/rice/wallpaper" ]; then
     ok "persisted -> $(readlink "$HOME/.cache/rice/wallpaper")"
 else
     bad "~/.cache/rice/wallpaper missing"
+fi
+
+echo "Light/dark mode:"
+if command -v rice-mode >/dev/null 2>&1; then
+    mode_json=$(rice-mode status --json 2>/dev/null) || mode_json=""
+    if [ -n "$mode_json" ]; then
+        mode=$(jq -r '.mode' <<<"$mode_json")
+        effective=$(jq -r '.effective' <<<"$mode_json")
+        ok "mode=$mode effective=$effective"
+        sunrise=$(jq -r '.sunrise // empty' <<<"$mode_json")
+        sunset=$(jq -r '.sunset // empty' <<<"$mode_json")
+        [ -n "$sunrise" ] && ok "sunrise $sunrise" || warn "sunrise unavailable"
+        [ -n "$sunset" ] && ok "sunset $sunset" || warn "sunset unavailable"
+        ok "location $(jq -r '.location' <<<"$mode_json")"
+        wallpaper=$(jq -r '.wallpaper // empty' <<<"$mode_json")
+        case "$wallpaper" in
+            "$HOME/Pictures/walls/$effective"/*) ok "wallpaper matches $effective mode" ;;
+            "") bad "no wallpaper for $effective mode" ;;
+            *) bad "wallpaper is outside $effective mode: $wallpaper" ;;
+        esac
+    else
+        bad "rice-mode status failed"
+    fi
+else
+    bad "rice-mode missing"
+fi
+[ -s "$HOME/.cache/rice/location" ] && ok "location persisted" || warn "location not persisted (using default)"
+theme_mode=$(cat "$HOME/.cache/rice/theme-mode" 2>/dev/null || true)
+effective_now=$(rice-mode current 2>/dev/null || true)
+if [ -n "$effective_now" ] && [ "$theme_mode" = "$effective_now" ]; then
+    ok "generated theme matches $effective_now"
+else
+    bad "theme-mode=${theme_mode:-missing} effective=${effective_now:-unknown}"
 fi

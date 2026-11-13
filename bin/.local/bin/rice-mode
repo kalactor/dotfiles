@@ -1,0 +1,600 @@
+#!/usr/bin/env python3
+"""rice-mode — automatic sunrise/sunset light/dark mode for the desktop.
+
+State lives in ~/.cache/rice:
+  mode            auto | light | dark
+  effective-mode  light | dark
+  location        "lat,lon"
+  wallpaper-<m>   last wallpaper chosen for mode <m>
+  wallpaper       symlink to the active wallpaper
+
+Commands:
+  rice-mode auto|light|dark     switch mode (light/dark are manual overrides)
+  rice-mode toggle              switch to the opposite manual mode
+  rice-mode tick                apply the current mode (used by the timer)
+  rice-mode resume              re-apply at login (forces theme regeneration)
+  rice-mode status [--json]     show mode, sun times and wallpaper
+  rice-mode current             print the effective mode
+  rice-mode waybar              Waybar custom-module JSON
+  rice-mode location [LAT,LON|auto]
+"""
+
+from __future__ import annotations
+
+import argparse
+import fcntl
+import json
+import math
+import os
+import subprocess
+import sys
+import urllib.request
+from datetime import date, datetime, time, timedelta, timezone
+from pathlib import Path
+from typing import Any
+
+HOME = Path.home()
+CACHE = HOME / ".cache" / "rice"
+MODE_FILE = CACHE / "mode"
+EFFECTIVE_FILE = CACHE / "effective-mode"
+LOCATION_FILE = CACHE / "location"
+LOCK_FILE = CACHE / "mode.lock"
+LOG_FILE = CACHE / "mode.log"
+WALLS = HOME / "Pictures" / "walls"
+WALL = HOME / ".local" / "bin" / "wall"
+
+MODES = ("auto", "light", "dark")
+EFFECTIVE_MODES = ("light", "dark")
+DEFAULT_LOCATION = (28.133528, 76.7542707)
+SUN_ZENITH = 90.833  # official sunrise/sunset zenith, includes refraction
+
+
+# ---------------------------------------------------------------------------
+# State helpers
+# ---------------------------------------------------------------------------
+
+
+def ensure_cache() -> None:
+    CACHE.mkdir(parents=True, exist_ok=True)
+
+
+def read_text(path: Path, default: str = "") -> str:
+    try:
+        return path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return default
+
+
+def write_text(path: Path, text: str) -> None:
+    ensure_cache()
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    os.replace(tmp, path)
+
+
+def read_mode() -> str:
+    value = read_text(MODE_FILE, "auto")
+    return value if value in MODES else "auto"
+
+
+def read_effective() -> str | None:
+    value = read_text(EFFECTIVE_FILE)
+    return value if value in EFFECTIVE_MODES else None
+
+
+def read_location() -> tuple[float, float]:
+    raw = read_text(LOCATION_FILE)
+    if not raw:
+        return DEFAULT_LOCATION
+    try:
+        return parse_location(raw)
+    except ValueError:
+        return DEFAULT_LOCATION
+
+
+def parse_location(value: str) -> tuple[float, float]:
+    parts = value.replace(" ", "").split(",")
+    if len(parts) != 2:
+        raise ValueError("expected LAT,LON")
+    lat, lon = float(parts[0]), float(parts[1])
+    if not -90 <= lat <= 90:
+        raise ValueError("latitude must be between -90 and 90")
+    if not -180 <= lon <= 180:
+        raise ValueError("longitude must be between -180 and 180")
+    return lat, lon
+
+
+def format_location(lat: float, lon: float) -> str:
+    return f"{lat:.6f},{lon:.6f}"
+
+
+def log(message: str) -> None:
+    ensure_cache()
+    try:
+        with LOG_FILE.open("a", encoding="utf-8") as fh:
+            fh.write(f"{datetime.now().isoformat(timespec='seconds')} {message}\n")
+    except OSError:
+        pass
+
+
+def acquire_lock() -> Any:
+    ensure_cache()
+    handle = LOCK_FILE.open("w", encoding="utf-8")
+    fcntl.flock(handle, fcntl.LOCK_EX)
+    return handle
+
+
+# ---------------------------------------------------------------------------
+# Sunrise / sunset (NOAA solar calculator, standard library only)
+# ---------------------------------------------------------------------------
+
+
+def local_timezone() -> Any:
+    """Best-effort IANA timezone, falling back to the current local offset."""
+    candidates: list[str] = []
+    tz_env = os.environ.get("TZ")
+    if tz_env:
+        candidates.append(tz_env)
+    try:
+        candidates.append(Path("/etc/timezone").read_text(encoding="utf-8").strip())
+    except OSError:
+        pass
+    try:
+        target = Path("/etc/localtime").resolve()
+        parts = target.parts
+        index = parts.index("zoneinfo")
+        candidates.append("/".join(parts[index + 1 :]))
+    except (OSError, ValueError):
+        pass
+
+    try:
+        from zoneinfo import ZoneInfo
+    except ImportError:  # pragma: no cover - Python < 3.9
+        ZoneInfo = None  # type: ignore[assignment]
+
+    if ZoneInfo is not None:
+        for name in candidates:
+            if not name:
+                continue
+            try:
+                return ZoneInfo(name)
+            except Exception:
+                continue
+    return datetime.now().astimezone().tzinfo or timezone.utc
+
+
+def _solar_event(
+    day: date, lat: float, lon: float, tz: Any, rising: bool
+) -> tuple[datetime | None, str | None]:
+    """Return (local event time, polar state) for one sunrise or sunset."""
+    n = day.timetuple().tm_yday
+    lng_hour = lon / 15.0
+    t = n + (((6.0 if rising else 18.0) - lng_hour) / 24.0)
+
+    m = (0.9856 * t) - 3.289
+    l = (
+        m
+        + (1.916 * math.sin(math.radians(m)))
+        + (0.020 * math.sin(math.radians(2 * m)))
+        + 282.634
+    ) % 360.0
+
+    ra = math.degrees(math.atan(0.91764 * math.tan(math.radians(l)))) % 360.0
+    l_quadrant = math.floor(l / 90.0) * 90.0
+    ra_quadrant = math.floor(ra / 90.0) * 90.0
+    ra = (ra + (l_quadrant - ra_quadrant)) / 15.0
+
+    sin_dec = 0.39782 * math.sin(math.radians(l))
+    cos_dec = math.cos(math.asin(sin_dec))
+    cos_h = (
+        math.cos(math.radians(SUN_ZENITH))
+        - (sin_dec * math.sin(math.radians(lat)))
+    ) / (cos_dec * math.cos(math.radians(lat)))
+
+    if cos_h > 1.0:
+        return None, "night"  # sun never rises
+    if cos_h < -1.0:
+        return None, "day"  # sun never sets
+
+    if rising:
+        h = 360.0 - math.degrees(math.acos(cos_h))
+    else:
+        h = math.degrees(math.acos(cos_h))
+    h /= 15.0
+
+    ut = (h + ra - (0.06571 * t) - 6.622 - lng_hour) % 24.0
+    utc_dt = datetime.combine(day, time.min, tzinfo=timezone.utc) + timedelta(
+        hours=ut
+    )
+    local_dt = utc_dt.astimezone(tz)
+
+    # The NOAA formula returns UT in [0, 24). East of Greenwich a summer
+    # sunrise can therefore land on the following local date (e.g. 23:56 UTC
+    # on the previous day is 05:26 local on the requested day). Normalize the
+    # event to the local date that was asked for.
+    if local_dt.date() > day:
+        local_dt -= timedelta(days=1)
+    elif local_dt.date() < day:
+        local_dt += timedelta(days=1)
+    return local_dt, None
+
+
+def solar_events(
+    day: date, lat: float, lon: float, tz: Any
+) -> tuple[datetime | None, datetime | None, str | None]:
+    sunrise, rise_polar = _solar_event(day, lat, lon, tz, True)
+    sunset, set_polar = _solar_event(day, lat, lon, tz, False)
+    polar = rise_polar or set_polar
+    if sunrise and sunset and sunset <= sunrise:
+        sunset += timedelta(days=1)
+    return sunrise, sunset, polar
+
+
+def compute_effective(
+    mode: str, now: datetime | None = None
+) -> tuple[str, dict[str, Any]]:
+    """Return the effective mode plus sunrise/sunset details."""
+    now = now or datetime.now().astimezone()
+    tz = local_timezone()
+    lat, lon = read_location()
+    sunrise, sunset, polar = solar_events(now.date(), lat, lon, tz)
+
+    info: dict[str, Any] = {
+        "sunrise": sunrise,
+        "sunset": sunset,
+        "polar": polar,
+        "next_event": None,
+        "next_time": None,
+    }
+
+    if sunrise and sunset:
+        if now < sunrise:
+            info["next_event"], info["next_time"] = "sunrise", sunrise
+        elif now < sunset:
+            info["next_event"], info["next_time"] = "sunset", sunset
+        else:
+            tomorrow = now.date() + timedelta(days=1)
+            next_sunrise, _, _ = solar_events(tomorrow, lat, lon, tz)
+            if next_sunrise:
+                info["next_event"], info["next_time"] = "sunrise", next_sunrise
+
+    if mode in EFFECTIVE_MODES:
+        return mode, info
+
+    if polar == "day":
+        return "light", info
+    if polar == "night":
+        return "dark", info
+
+    if sunrise and sunset:
+        return ("light" if sunrise <= now < sunset else "dark"), info
+
+    # Last-resort fallback if the solar calculation failed.
+    return ("light" if 7 <= now.hour < 19 else "dark"), info
+
+
+# ---------------------------------------------------------------------------
+# Formatting
+# ---------------------------------------------------------------------------
+
+
+def fmt_dt(value: datetime | None) -> str:
+    if value is None:
+        return ""
+    return value.strftime("%Y-%m-%d %H:%M %Z")
+
+
+def human_delta(value: datetime | None, now: datetime | None = None) -> str:
+    if value is None:
+        return ""
+    now = now or datetime.now().astimezone()
+    seconds = abs(int((value - now).total_seconds()))
+    hours, remainder = divmod(seconds, 3600)
+    minutes = remainder // 60
+    if hours:
+        return f"{hours}h {minutes}m"
+    return f"{minutes}m"
+
+
+def wallpaper_for(mode: str) -> str:
+    """Return the saved wallpaper for a mode, or the active symlink target."""
+    saved = CACHE / f"wallpaper-{mode}"
+    candidate = read_text(saved)
+    if candidate and Path(candidate).is_file():
+        try:
+            if Path(candidate).is_relative_to(WALLS / mode):
+                return candidate
+        except (OSError, ValueError):
+            pass
+
+    link = CACHE / "wallpaper"
+    try:
+        target = link.resolve(strict=True)
+    except OSError:
+        return ""
+    try:
+        if target.is_file() and target.is_relative_to(WALLS / mode):
+            return str(target)
+    except (OSError, ValueError):
+        pass
+    return ""
+
+
+def status_data() -> dict[str, Any]:
+    mode = read_mode()
+    now = datetime.now().astimezone()
+    effective, info = compute_effective(mode, now)
+    lat, lon = read_location()
+    return {
+        "mode": mode,
+        "effective": effective,
+        "location": format_location(lat, lon),
+        "sunrise": fmt_dt(info["sunrise"]),
+        "sunset": fmt_dt(info["sunset"]),
+        "polar": info["polar"],
+        "next_event": info["next_event"],
+        "next_time": fmt_dt(info["next_time"]),
+        "next_in": human_delta(info["next_time"], now),
+        "wallpaper": wallpaper_for(effective),
+    }
+
+
+def print_status(as_json: bool = False) -> None:
+    data = status_data()
+    if as_json:
+        print(json.dumps(data, indent=2))
+        return
+
+    mode = data["mode"]
+    print(f"mode:      {mode}{' (forced)' if mode != 'auto' else ''}")
+    print(f"effective: {data['effective']}")
+    print(f"location:  {data['location']}")
+    if data["sunrise"]:
+        print(f"sunrise:   {data['sunrise']}")
+    if data["sunset"]:
+        print(f"sunset:    {data['sunset']}")
+    if data["polar"]:
+        print(f"polar:     {data['polar']} (no sunrise/sunset today)")
+    if data["next_event"] and data["next_time"]:
+        print(
+            f"next:      {data['next_event']} in {data['next_in']} "
+            f"({data['next_time']})"
+        )
+    print(f"wallpaper: {data['wallpaper'] or '(none)'}")
+
+
+def waybar_json() -> str:
+    data = status_data()
+    effective = data["effective"]
+    text = "☀" if effective == "light" else "☾"
+    tooltip = [
+        f"{effective} ({'auto' if data['mode'] == 'auto' else 'forced'})",
+        f"Sunrise {data['sunrise'] or 'n/a'}",
+        f"Sunset {data['sunset'] or 'n/a'}",
+    ]
+    if data["next_event"] and data["next_time"]:
+        tooltip.append(
+            f"Next {data['next_event']} in {data['next_in']} "
+            f"({data['next_time']})"
+        )
+    tooltip.append(data["location"])
+    return json.dumps(
+        {"text": text, "tooltip": "\n".join(tooltip), "class": effective}
+    )
+
+
+# ---------------------------------------------------------------------------
+# Actions
+# ---------------------------------------------------------------------------
+
+
+def run_wall(args: list[str], quiet: bool = False) -> int:
+    try:
+        proc = subprocess.run(
+            [str(WALL), *args],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+    except OSError as exc:
+        log(f"wall {' '.join(args)}: {exc}")
+        if not quiet:
+            print(f"rice-mode: cannot run wall: {exc}", file=sys.stderr)
+        return 1
+
+    if proc.returncode != 0:
+        detail = (proc.stderr or proc.stdout or "").strip()
+        log(f"wall {' '.join(args)} failed: {detail}")
+        if not quiet:
+            print(
+                f"rice-mode: wall {' '.join(args)} failed"
+                + (f": {detail}" if detail else ""),
+                file=sys.stderr,
+            )
+    return proc.returncode
+
+
+def set_mode(
+    mode: str,
+    *,
+    apply: bool = True,
+    force: bool = False,
+    quiet: bool = False,
+) -> tuple[str, dict[str, Any]]:
+    ensure_cache()
+    old_effective = read_effective()
+    write_text(MODE_FILE, mode + "\n")
+    if not LOCATION_FILE.exists():
+        lat, lon = read_location()
+        write_text(LOCATION_FILE, format_location(lat, lon) + "\n")
+
+    effective, info = compute_effective(mode)
+    write_text(EFFECTIVE_FILE, effective + "\n")
+    log(f"mode={mode} effective={effective} apply={apply} force={force}")
+
+    if apply:
+        if old_effective == effective and not force:
+            run_wall(["ensure-mode", effective], quiet=quiet)
+        else:
+            run_wall(["apply-mode", effective], quiet=quiet)
+    return effective, info
+
+
+def cmd_tick(args: argparse.Namespace) -> int:
+    mode = read_mode()
+    old_effective = read_effective()
+    effective, info = compute_effective(mode)
+
+    if not LOCATION_FILE.exists():
+        lat, lon = read_location()
+        write_text(LOCATION_FILE, format_location(lat, lon) + "\n")
+    write_text(EFFECTIVE_FILE, effective + "\n")
+
+    if old_effective != effective:
+        log(f"tick: {old_effective or 'unset'} -> {effective} (mode={mode})")
+        run_wall(["apply-mode", effective], quiet=True)
+    else:
+        run_wall(["ensure-mode", effective], quiet=True)
+
+    if getattr(args, "verbose", False):
+        print(
+            f"mode={mode} effective={effective} "
+            f"sunrise={fmt_dt(info['sunrise'])} sunset={fmt_dt(info['sunset'])}"
+        )
+    return 0
+
+
+def cmd_resume(args: argparse.Namespace) -> int:
+    effective, _ = set_mode(read_mode(), apply=True, force=True, quiet=True)
+    log(f"resume: effective={effective}")
+    return 0
+
+
+def cmd_current(args: argparse.Namespace) -> int:
+    print(compute_effective(read_mode())[0])
+    return 0
+
+
+def cmd_toggle(args: argparse.Namespace) -> int:
+    mode = read_mode()
+    effective, _ = compute_effective(mode)
+    new_mode = "dark" if effective == "light" else "light"
+    set_mode(new_mode, apply=not args.no_apply)
+    return 0
+
+
+def cmd_location(args: argparse.Namespace) -> int:
+    value = args.value
+    if value is None:
+        lat, lon = read_location()
+        print(format_location(lat, lon))
+        return 0
+
+    if value.lower() == "auto":
+        try:
+            with urllib.request.urlopen(
+                "https://ipinfo.io/loc", timeout=6
+            ) as response:
+                value = response.read().decode("utf-8").strip()
+            lat, lon = parse_location(value)
+        except Exception as exc:
+            print(f"rice-mode: location lookup failed: {exc}", file=sys.stderr)
+            return 1
+    else:
+        try:
+            lat, lon = parse_location(value)
+        except ValueError as exc:
+            print(f"rice-mode: {exc}", file=sys.stderr)
+            return 1
+
+    write_text(LOCATION_FILE, format_location(lat, lon) + "\n")
+    log(f"location={format_location(lat, lon)}")
+    print(format_location(lat, lon))
+    if not args.no_apply:
+        set_mode(read_mode(), apply=True, quiet=False)
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="rice-mode",
+        description="Sunrise/sunset light/dark mode for the desktop.",
+    )
+    parser.add_argument(
+        "--no-apply",
+        action="store_true",
+        help="persist the mode without changing wallpaper or colours",
+    )
+    sub = parser.add_subparsers(dest="command")
+
+    for name in ("auto", "light", "dark"):
+        p = sub.add_parser(name, help=f"switch to {name} mode")
+        p.set_defaults(func=lambda args, n=name: set_mode(n, apply=not args.no_apply))
+
+    p_toggle = sub.add_parser("toggle", help="switch to the opposite manual mode")
+    p_toggle.set_defaults(func=cmd_toggle)
+
+    p_tick = sub.add_parser("tick", help="apply the current mode (timer entry point)")
+    p_tick.add_argument("--verbose", action="store_true")
+    p_tick.set_defaults(func=cmd_tick)
+
+    p_resume = sub.add_parser("resume", help="re-apply the current mode at login")
+    p_resume.set_defaults(func=cmd_resume)
+
+    p_status = sub.add_parser("status", help="show mode and sun times")
+    p_status.add_argument("--json", action="store_true")
+    p_status.set_defaults(func=lambda args: print_status(args.json))
+
+    p_current = sub.add_parser("current", help="print the effective mode")
+    p_current.set_defaults(func=cmd_current)
+
+    p_waybar = sub.add_parser("waybar", help="Waybar custom-module JSON")
+    p_waybar.set_defaults(func=lambda args: print(waybar_json()))
+
+    p_location = sub.add_parser("location", help="show or set the sun location")
+    p_location.add_argument(
+        "value",
+        nargs="?",
+        help="LAT,LON, or 'auto' to look it up from the network",
+    )
+    p_location.set_defaults(func=cmd_location)
+
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if not getattr(args, "command", None):
+        parser.print_help()
+        return 2
+
+    ensure_cache()
+
+    mutating = args.command in {
+        "auto",
+        "light",
+        "dark",
+        "toggle",
+        "tick",
+        "resume",
+        "location",
+    }
+    lock = acquire_lock() if mutating else None
+    try:
+        result = args.func(args)
+        if isinstance(result, int):
+            return result
+        return 0
+    finally:
+        if lock is not None:
+            lock.close()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

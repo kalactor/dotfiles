@@ -1,38 +1,189 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # usage: wall next | prev | random | set FILE | pick
-DIR="$HOME/Pictures/walls"
+#        wall apply-mode light|dark    (switch mode + wallpaper + theme)
+#        wall ensure-mode light|dark   (repair wallpaper/theme without regenerating)
+set -uo pipefail
+
+CACHE="$HOME/.cache/rice"
+WALLS="$HOME/Pictures/walls"
 FIT="cover"
 THUMBS=true     # true = rofi shows image previews, false = plain text list (faster on big folders)
 
-mapfile -t files < <(find "$DIR" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' -o -iname '*.jxl' \) | sort)
-n=${#files[@]}
-[ "$n" -eq 0 ] && { notify-send "wall" "No wallpapers in $DIR"; exit 1; }
+mkdir -p "$CACHE"
 
-set_wall() {
-	mkdir -p "$HOME/.cache/rice"
-	ln -sf "$1" "$HOME/.cache/rice/wallpaper"
-	hyprctl hyprpaper wallpaper ",$1,$FIT";
-	"$HOME/.local/bin/theme-apply" "$1"
+die() { printf 'wall: %s\n' "$*" >&2; exit 1; }
+
+valid_mode() { case "$1" in light|dark) return 0;; *) return 1;; esac; }
+
+current_mode() {
+    local mode=""
+    if [ -x "$HOME/.local/bin/rice-mode" ]; then
+        mode=$("$HOME/.local/bin/rice-mode" current 2>/dev/null) || mode=""
+    fi
+    if ! valid_mode "$mode"; then
+        mode=$(cat "$CACHE/effective-mode" 2>/dev/null || true)
+    fi
+    if valid_mode "$mode"; then printf '%s\n' "$mode"; else printf 'dark\n'; fi
 }
 
-cur=$(hyprctl hyprpaper listactive | sed -n 's/^DP-3: *//p' | head -n1)
-[ -z "$cur" ] && cur=$(hyprctl hyprpaper listactive | head -n1 | sed 's/^[^:]*: *//')
-idx=-1
-for i in "${!files[@]}"; do [ "${files[$i]}" = "$cur" ] && idx=$i && break; done
+list_walls() {
+    local mode="$1"
+    find "$WALLS/$mode" -maxdepth 1 -type f \
+        \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \
+           -o -iname '*.webp' -o -iname '*.jxl' \) \
+        -print0 2>/dev/null | sort -z
+}
 
-case "$1" in
-  next)   set_wall "${files[$(( (idx + 1) % n ))]}" ;;
-  prev)   set_wall "${files[$(( (idx - 1 + n) % n ))]}" ;;
-  random) set_wall "${files[RANDOM % n]}" ;;
-  set)
-    [ -f "$2" ] && set_wall "$(realpath "$2")" || echo "usage: wall set /path/to/image" ;;
-  pick)
-    if $THUMBS; then
-      sel=$(for f in "${files[@]}"; do printf '%s\0icon\x1f%s\n' "${f#$DIR/}" "$f"; done \
-            | rofi -dmenu -i -show-icons -p "Wallpaper") || exit
-    else
-      sel=$(printf '%s\n' "${files[@]#$DIR/}" | rofi -dmenu -i -p "Wallpaper") || exit
+choose_wall() {
+    local mode="$1" saved="$CACHE/wallpaper-$mode" file=""
+    if [ -f "$saved" ]; then
+        file=$(<"$saved")
+        if [ -n "$file" ] && [ -f "$file" ] && [[ "$file" == "$WALLS/$mode/"* ]]; then
+            printf '%s\n' "$file"
+            return 0
+        fi
     fi
-    [ -n "$sel" ] && set_wall "$DIR/$sel" ;;
-  *) echo "usage: wall next|prev|random|set FILE|pick" ;;
+
+    local -a files=()
+    mapfile -d '' -t files < <(list_walls "$mode")
+    [ "${#files[@]}" -gt 0 ] || return 1
+    printf '%s\n' "${files[RANDOM % ${#files[@]}]}"
+}
+
+set_hyprpaper() {
+    local file="$1" i
+
+    # A user timer can fire before Hyprland starts. Do not spawn hyprpaper
+    # outside a live session; the login resume will set the wallpaper later.
+    hyprctl monitors >/dev/null 2>&1 || return 0
+
+    if ! pgrep -x hyprpaper >/dev/null 2>&1; then
+        # Give the session autostart a moment before starting a second copy.
+        for i in $(seq 1 25); do
+            pgrep -x hyprpaper >/dev/null 2>&1 && break
+            sleep 0.2
+        done
+        if ! pgrep -x hyprpaper >/dev/null 2>&1; then
+            # Close fd 9 (the wallpaper lock) so hyprpaper does not inherit it
+            # and hold the lock for the lifetime of the session.
+            setsid hyprpaper >/dev/null 2>&1 9>&- &
+        fi
+    fi
+
+    for i in $(seq 1 25); do
+        if hyprctl hyprpaper wallpaper ",$file,$FIT" >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 0.2
+    done
+    notify-send -u critical "wall" "hyprpaper did not accept $file" 2>/dev/null || true
+    return 1
+}
+
+set_wall() {
+    local file="$1" mode="$2"
+    valid_mode "$mode" || die "invalid mode: $mode"
+    [ -f "$file" ] || die "no such wallpaper: $file"
+    [[ "$file" == "$WALLS/$mode/"* ]] || die "$file is not inside $WALLS/$mode"
+
+    (
+        flock -w 60 9 || die "timed out waiting for wallpaper lock"
+        ln -sfn "$file" "$CACHE/wallpaper"
+        printf '%s\n' "$file" > "$CACHE/wallpaper-$mode"
+        printf '%s\n' "$mode" > "$CACHE/effective-mode"
+        set_hyprpaper "$file" || true
+        "$HOME/.local/bin/theme-apply" "$file" "$mode" || true
+    ) 9>"$CACHE/wall.lock"
+}
+
+apply_mode() {
+    local mode="$1" file
+    valid_mode "$mode" || die "invalid mode: $mode"
+    file=$(choose_wall "$mode") || die "no wallpapers in $WALLS/$mode"
+    set_wall "$file" "$mode"
+}
+
+ensure_mode() {
+    local mode="$1" file theme_mode cur
+    valid_mode "$mode" || die "invalid mode: $mode"
+    file=$(choose_wall "$mode") || die "no wallpapers in $WALLS/$mode"
+
+    (
+        flock -w 60 9 || die "timed out waiting for wallpaper lock"
+        ln -sfn "$file" "$CACHE/wallpaper"
+        printf '%s\n' "$file" > "$CACHE/wallpaper-$mode"
+        printf '%s\n' "$mode" > "$CACHE/effective-mode"
+
+        cur=$(hyprctl hyprpaper listactive 2>/dev/null | sed -n 's/^DP-3: *//p' | head -n1)
+        if [ "$cur" != "$file" ]; then
+            set_hyprpaper "$file" || true
+        fi
+
+        theme_mode=$(cat "$CACHE/theme-mode" 2>/dev/null || true)
+        if [ "$theme_mode" != "$mode" ]; then
+            "$HOME/.local/bin/theme-apply" "$file" "$mode" || true
+        fi
+    ) 9>"$CACHE/wall.lock"
+}
+
+mode=$(current_mode)
+
+case "${1:-}" in
+  next|prev|random)
+    mapfile -d '' -t files < <(list_walls "$mode")
+    n=${#files[@]}
+    [ "$n" -gt 0 ] || die "no wallpapers in $WALLS/$mode"
+
+    cur=$(hyprctl hyprpaper listactive 2>/dev/null | sed -n 's/^DP-3: *//p' | head -n1)
+    [ -z "$cur" ] && cur=$(hyprctl hyprpaper listactive 2>/dev/null | head -n1 | sed 's/^[^:]*: *//')
+    idx=-1
+    for i in "${!files[@]}"; do [ "${files[$i]}" = "$cur" ] && idx=$i && break; done
+
+    case "$1" in
+      next)   set_wall "${files[$(( (idx + 1) % n ))]}" "$mode" ;;
+      prev)   set_wall "${files[$(( (idx - 1 + n) % n ))]}" "$mode" ;;
+      random) set_wall "${files[RANDOM % n]}" "$mode" ;;
+    esac
+    ;;
+  set)
+    [ $# -ge 2 ] || die "usage: wall set /path/to/image"
+    file=$(realpath -e -- "$2" 2>/dev/null) || die "no such file: $2"
+    case "$file" in
+      "$WALLS/light"/*) filemode=light ;;
+      "$WALLS/dark"/*)  filemode=dark ;;
+      *) die "wallpaper must be inside $WALLS/light or $WALLS/dark" ;;
+    esac
+
+    # Choosing a wallpaper from the other mode is a manual override; choosing
+    # one from the current mode keeps automatic switching enabled.
+    if [ "$mode" != "$filemode" ]; then
+        "$HOME/.local/bin/rice-mode" --no-apply "$filemode" >/dev/null 2>&1 \
+            || die "could not switch to $filemode mode"
+    fi
+    set_wall "$file" "$filemode"
+    ;;
+  pick)
+    mapfile -d '' -t files < <(list_walls "$mode")
+    [ "${#files[@]}" -gt 0 ] || die "no wallpapers in $WALLS/$mode"
+
+    if $THUMBS; then
+      sel=$(for f in "${files[@]}"; do printf '%s\0icon\x1f%s\n' "${f#$WALLS/$mode/}" "$f"; done \
+            | rofi -dmenu -i -show-icons -p "Wallpaper ($mode)") || exit
+    else
+      sel=$(printf '%s\n' "${files[@]#$WALLS/$mode/}" | rofi -dmenu -i -p "Wallpaper ($mode)") || exit
+    fi
+    [ -n "$sel" ] && set_wall "$WALLS/$mode/$sel" "$mode"
+    ;;
+  apply-mode)
+    [ $# -ge 2 ] || die "usage: wall apply-mode light|dark"
+    apply_mode "$2"
+    ;;
+  ensure-mode)
+    [ $# -ge 2 ] || die "usage: wall ensure-mode light|dark"
+    ensure_mode "$2"
+    ;;
+  *)
+    echo "usage: wall next|prev|random|set FILE|pick|apply-mode MODE|ensure-mode MODE"
+    exit 2
+    ;;
 esac

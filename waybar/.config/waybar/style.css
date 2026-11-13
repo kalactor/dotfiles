@@ -105,6 +105,7 @@ button:hover {
 #pulseaudio,
 #custom-expand-icon,
 #custom-weather,
+#custom-mode,
 #custom-seed4,
 #custom-updates,
 #custom-power {
@@ -113,6 +114,16 @@ button:hover {
     opacity: 1;
     padding: 0px 4px;
     margin: 0px 2px 0px 2px;
+}
+
+/* Light/dark mode indicator: click toggles, right-click returns to auto */
+#custom-mode {
+    font-size: 14px;
+    color: @accent;
+}
+
+#custom-mode.dark {
+    color: @color5;
 }
 
 #pulseaudio.muted {

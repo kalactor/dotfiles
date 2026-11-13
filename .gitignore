@@ -24,6 +24,10 @@ colors/
 .ssh/
 gnupg/
 
+# Python bytecode
+__pycache__/
+*.pyc
+
 # Editor / OS noise
 .DS_Store
 *.swp

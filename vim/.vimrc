@@ -1,9 +1,29 @@
 " ~/.vimrc — vim + vim-plug + coc.nvim, colors from wallust
 set nocompatible
 filetype plugin indent on
-syntax enable
 set termguicolors
-set background=dark
+
+" Follow the desktop light/dark mode for Vim's default background. The
+" generated wallust colorscheme also sets this; this is the pre-colorscheme
+" fallback and keeps :set background in sync after a mode change.
+function! s:RiceMode() abort
+  let l:file = expand('~/.cache/rice/effective-mode')
+  if filereadable(l:file)
+    let l:lines = readfile(l:file, '', 1)
+    if !empty(l:lines) && l:lines[0] =~# '^light$'
+      return 'light'
+    endif
+  endif
+  return 'dark'
+endfunction
+
+if s:RiceMode() ==# 'light'
+  set background=light
+else
+  set background=dark
+endif
+
+syntax enable
 
 " Look
 set number
@@ -45,6 +65,11 @@ function! s:WallustReload(...) abort
   let l:mtime = getftime(l:file)
   if l:mtime != get(g:, 'wallust_colors_mtime', -1)
     let g:wallust_colors_mtime = l:mtime
+    if s:RiceMode() ==# 'light'
+      set background=light
+    else
+      set background=dark
+    endif
     silent! colorscheme wallust
   endif
 endfunction

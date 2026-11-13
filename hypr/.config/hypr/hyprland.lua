@@ -86,6 +86,9 @@ hl.on("hyprland.start", function ()
    hl.exec_cmd("waybar")
    hl.exec_cmd("swaync")
    hl.exec_cmd("hyprpaper")
+   -- Let hyprpaper create its socket, then restore the light/dark wallpaper
+   -- and regenerate the palette for the current mode.
+   hl.exec_cmd("sh -c 'sleep 2; exec $HOME/.local/bin/rice-mode resume'")
    hl.exec_cmd("Telegram")
    hl.exec_cmd("hypridle")
 end)
@@ -350,11 +353,18 @@ hl.bind(mainMod .. " + SHIFT + C", hl.dsp.exec_cmd("hyprpicker -a"))
 -- Night light (hyprsunset)
 hl.bind(mainMod .. " + SHIFT + F10", hl.dsp.exec_cmd("$HOME/.local/bin/rice-nightlight"))
 
--- Wallpaper Manager
+-- Wallpaper Manager (only cycles wallpapers from the current light/dark mode)
 hl.bind("SUPER + F6", hl.dsp.exec_cmd("$HOME/.local/bin/wall next"))
 hl.bind("SUPER + SHIFT + F6", hl.dsp.exec_cmd("$HOME/.local/bin/wall prev"))
 hl.bind("SUPER + F7", hl.dsp.exec_cmd("$HOME/.local/bin/wall random"))
 hl.bind("SUPER + F8", hl.dsp.exec_cmd("$HOME/.local/bin/wall pick"))
+
+-- Light/dark mode. Auto follows sunrise/sunset; light/dark force the whole
+-- system and stop automatic switching until "auto" is pressed again.
+hl.bind("SUPER + CTRL + L", hl.dsp.exec_cmd("$HOME/.local/bin/rice-mode light"))
+hl.bind("SUPER + CTRL + D", hl.dsp.exec_cmd("$HOME/.local/bin/rice-mode dark"))
+hl.bind("SUPER + CTRL + A", hl.dsp.exec_cmd("$HOME/.local/bin/rice-mode auto"))
+hl.bind("SUPER + CTRL + T", hl.dsp.exec_cmd("$HOME/.local/bin/rice-mode toggle"))
 
 -- Screen Recorder
 hl.bind("SUPER + F9", hl.dsp.exec_cmd("$HOME/.local/bin/gsr-toggle"))

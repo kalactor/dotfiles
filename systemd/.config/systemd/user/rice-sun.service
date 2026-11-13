@@ -1,0 +1,8 @@
+[Unit]
+Description=Apply sunrise/sunset light/dark mode
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/rice-mode tick
+Nice=10
