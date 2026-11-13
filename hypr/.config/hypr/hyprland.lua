@@ -475,6 +475,31 @@ hl.window_rule({
 	float = true,
 })
 
+-- Fixed-size floating dialogs
+hl.window_rule({
+	name   = "file-chooser-portal",
+	match  = { class = "^(xdg-desktop-portal-gtk)$" },
+	float  = true,
+	center = true,
+	size   = { 1000, 700 },
+})
+
+hl.window_rule({
+	name   = "file-chooser-dialogs",
+	match  = { title = "^(Open File|Open Files|Save File|Save As|Select a File|Select Folder|Open Folder|File Upload)$" },
+	float  = true,
+	center = true,
+	size   = { 1000, 700 },
+})
+
+hl.window_rule({
+	name   = "pavucontrol-size",
+	match  = { class = "^(org\\.pulseaudio\\.)?pavucontrol$" },
+	float  = true,
+	center = true,
+	size   = { 900, 650 },
+})
+
 -- Layer effects. NOTE: plain `layerrule = {...}` tables did nothing; use hl.layer_rule.
 hl.layer_rule({ name = "rofi-blur",    match = { namespace = "^rofi$" },    blur = true })
 hl.layer_rule({ name = "swaync-blur",  match = { namespace = "^swaync" },   blur = true })
