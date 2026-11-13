@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# usage: rice-nightlight [temperature]
+# Toggles hyprsunset. Default 4000K.
+temp="${1:-4000}"
+
+if pgrep -x hyprsunset >/dev/null; then
+  pkill -x hyprsunset
+  notify-send -u low "Night light" "Off"
+else
+  setsid hyprsunset -t "$temp" >/dev/null 2>&1 < /dev/null &
+  notify-send -u low "Night light" "On (${temp}K)"
+fi

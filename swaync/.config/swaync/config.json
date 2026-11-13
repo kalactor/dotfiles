@@ -4,6 +4,8 @@
   "positionY": "top",
   "layer": "overlay",
   "control-center-layer": "top",
+  "notification-window-preferred-output": "DP-3",
+  "control-center-preferred-output": "DP-3",
   "control-center-width": 400,
   "notification-window-width": 380,
   "timeout": 5,
@@ -19,6 +21,7 @@
   "widget-config": {
     "title": { "text": "Notifications", "clear-all-button": true, "button-text": "Clear All" },
     "dnd": { "text": "Do Not Disturb" },
-    "mpris": { "image-size": 96, "image-radius": 12 }
+    "mpris": { "image-size": 96, "image-radius": 12 },
+    "notifications": { "vexpand": true }
   }
 }

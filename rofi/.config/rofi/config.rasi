@@ -1,3 +1,5 @@
+@import "colors.rasi"
+
 configuration {
     modi: "drun,run,window";
     show-icons: true;
@@ -8,19 +10,28 @@ configuration {
     font: "JetBrainsMono Nerd Font 11";
     matching: "fuzzy";
     sort: true;
+    monitor: "-1";
 }
 
 * {
-    bg: #11111bcc;
-    bg-alt: #24243acc;
-    fg: #e6e6f0;
-    muted: #9394aa;
-    purple: #cba6f7;
-    pink: #f5c2e7;
-    blue: #89b4fa;
-
     background-color: transparent;
     text-color: @fg;
+
+    /* Rofi's built-in state variables, mapped onto the wallust palette */
+    normal-background: transparent;
+    normal-foreground: @fg;
+    alternate-normal-background: transparent;
+    alternate-normal-foreground: @fg;
+    selected-normal-background: @selection;
+    selected-normal-foreground: @accent;
+    selected-active-background: @selection;
+    selected-active-foreground: @accent;
+    selected-urgent-background: @urgent;
+    selected-urgent-foreground: @fg;
+    active-background: @selection;
+    active-foreground: @accent;
+    urgent-background: @urgent;
+    urgent-foreground: @bg;
 }
 
 window {
@@ -28,7 +39,7 @@ window {
     location: center;
     anchor: center;
     border: 2px;
-    border-color: #cba6f780;
+    border-color: @border;
     border-radius: 20px;
     background-color: @bg;
     padding: 8px;
@@ -45,14 +56,14 @@ inputbar {
     padding: 14px 16px;
     spacing: 12px;
     border: 1px;
-    border-color: #cba6f740;
+    border-color: @selection-border;
     border-radius: 14px;
     background-color: @bg-alt;
     children: [ prompt, entry ];
 }
 
 prompt {
-    text-color: @purple;
+    text-color: @accent;
     background-color: transparent;
 }
 
@@ -84,10 +95,10 @@ element normal.normal {
 }
 
 element selected.normal {
-    background-color: #cba6f730;
-    text-color: @purple;
+    background-color: @selection;
+    text-color: @accent;
     border: 1px;
-    border-color: #cba6f770;
+    border-color: @selection-border;
 }
 
 element-icon {

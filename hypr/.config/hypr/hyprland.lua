@@ -27,7 +27,7 @@ local secondary = "HDMI-A-1"
 
 hl.monitor({
     output   = primary,
-    mode     = "preferred",
+    mode     = "1920x1080@165",
     position = "0x0",
     scale    = "auto",
     supports_wide_color = -1
@@ -40,23 +40,14 @@ hl.monitor({
     scale    = "auto",
 })
 
-hl.workspace_rule({
-	workspace = "1",
-	monitor = "DP-3",
-	default = true
-})
+-- Workspaces 1-5 live on the primary monitor, 6-10 on the secondary
+for ws = 1, 5 do
+    hl.workspace_rule({ workspace = tostring(ws), monitor = primary, default = true })
+end
 
-hl.workspace_rule({
-	workspace = "2",
-	monitor = "DP-3",
-	default = true
-})
-
-hl.workspace_rule({
-	workspace = "3",
-	monitor = "DP-3",
-	default = true
-})
+for ws = 6, 10 do
+    hl.workspace_rule({ workspace = tostring(ws), monitor = secondary, default = true })
+end
 ---------------------
 ---- MY PROGRAMS ----
 ---------------------
@@ -76,14 +67,27 @@ local menu        = "rofi -show drun"
 -- Autostart necessary processes (like notifications daemons, status bars, etc.)
 -- Or execute your favorite apps at launch like this:
 --
-hl.on("hyprland.start", function () 
+hl.on("hyprland.start", function ()
+   -- Make the Wayland session visible to systemd/D-Bus before portals start
+   hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE")
+
+   -- These two auto-start at login before the Hyprland socket exists, so they
+   -- fail with start-limit-hit. Reset and start them now that the socket is up.
+   hl.exec_cmd("systemctl --user reset-failed hyprpolkitagent xdg-desktop-portal-hyprland; systemctl --user start hyprpolkitagent xdg-desktop-portal-hyprland")
+
+   -- Clipboard history
+   hl.exec_cmd("wl-paste --watch cliphist store")
+   hl.exec_cmd("wl-paste --primary --watch cliphist store")
+
+   -- Volume/brightness OSD
+   hl.exec_cmd("swayosd-server")
+
    hl.exec_cmd("nm-applet")
    hl.exec_cmd("waybar")
    hl.exec_cmd("swaync")
    hl.exec_cmd("hyprpaper")
    hl.exec_cmd("Telegram")
    hl.exec_cmd("hypridle")
-   hl.exec_cmd("systemctl --user start hyprpolkitagent")
 end)
 
 
@@ -95,6 +99,17 @@ end)
 
 hl.env("XCURSOR_SIZE", "24")
 hl.env("HYPRCURSOR_SIZE", "24")
+hl.env("XCURSOR_THEME", "Adwaita")
+
+-- NVIDIA (nvidia-open, DRM modesetting enabled)
+hl.env("LIBVA_DRIVER_NAME", "nvidia")
+hl.env("__GLX_VENDOR_LIBRARY_NAME", "nvidia")
+hl.env("NVD_BACKEND", "direct")
+hl.env("GBM_BACKEND", "nvidia-drm")
+
+-- Qt: use qt6ct for the platform theme and Kvantum for widget style
+hl.env("QT_QPA_PLATFORMTHEME", "qt6ct")
+hl.env("QT_STYLE_OVERRIDE", "kvantum")
 
 
 -----------------------
@@ -126,7 +141,7 @@ hl.config({
         gaps_in  = 4,
         gaps_out = 8,
 
-        border_size = 0,
+        border_size = 2,
 
         col = {
             active_border   = { colors = {"rgba(33ccffee)", "rgba(00ff99ee)"}, angle = 45 },
@@ -173,6 +188,9 @@ hl.config({
 	    numlock_by_default = true,
     },
 })
+
+-- Wallust-generated palette (overrides border colors). Safe if the file is missing.
+pcall(require, "colors")
 
 -- Default curves and animations, see https://wiki.hypr.land/configuring/core/animations/
 hl.curve("easeOutQuint",   { type = "bezier", points = { {0.23, 1},    {0.32, 1}    } })
@@ -310,7 +328,7 @@ local mainMod = "SUPER" -- Sets "Windows" key as main modifier
 hl.bind(mainMod .. " + T", hl.dsp.exec_cmd(terminal))
 local closeWindowBind = hl.bind(mainMod .. " + Q", hl.dsp.window.close())
 -- closeWindowBind:set_enabled(false)
-hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch 'hl.dsp.exit()'"))
+hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("hyprshutdown"))
 hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(fileManager))
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + A", hl.dsp.exec_cmd(menu))
@@ -323,6 +341,14 @@ hl.bind(mainMod .. " + L", hl.dsp.exec_cmd("loginctl lock-session"))
 
 -- SwayNC bindings
 hl.bind(mainMod .. " + N", hl.dsp.exec_cmd("swaync-client -t"))
+hl.bind(mainMod .. " + SHIFT + N", hl.dsp.exec_cmd("swaync-client -d"))
+
+-- Clipboard history and color picker
+hl.bind(mainMod .. " + SHIFT + V", hl.dsp.exec_cmd("$HOME/.local/bin/rice-clipboard"))
+hl.bind(mainMod .. " + SHIFT + C", hl.dsp.exec_cmd("hyprpicker -a"))
+
+-- Night light (hyprsunset)
+hl.bind(mainMod .. " + SHIFT + F10", hl.dsp.exec_cmd("$HOME/.local/bin/rice-nightlight"))
 
 -- Wallpaper Manager
 hl.bind("SUPER + F6", hl.dsp.exec_cmd("$HOME/.local/bin/wall next"))
@@ -369,13 +395,13 @@ hl.bind(mainMod .. " + mouse_up",   hl.dsp.focus({ workspace = "e-1" }))
 hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(),   { mouse = true })
 hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 
--- Laptop multimedia keys for volume and LCD brightness
-hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"), { locked = true, repeating = true })
-hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"),      { locked = true, repeating = true })
-hl.bind("XF86AudioMute",        hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),     { locked = true, repeating = true })
-hl.bind("XF86AudioMicMute",     hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"),   { locked = true, repeating = true })
-hl.bind("XF86MonBrightnessUp",  hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%+"),                  { locked = true, repeating = true })
-hl.bind("XF86MonBrightnessDown",hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%-"),                  { locked = true, repeating = true })
+-- Volume/brightness keys, with the SwayOSD overlay
+hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("swayosd-client --output-volume raise"), { locked = true, repeating = true })
+hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("swayosd-client --output-volume lower"), { locked = true, repeating = true })
+hl.bind("XF86AudioMute",        hl.dsp.exec_cmd("swayosd-client --output-volume mute-toggle"), { locked = true, repeating = true })
+hl.bind("XF86AudioMicMute",     hl.dsp.exec_cmd("swayosd-client --input-volume mute-toggle"),  { locked = true, repeating = true })
+hl.bind("XF86MonBrightnessUp",  hl.dsp.exec_cmd("$HOME/.local/bin/rice-brightness up"),        { locked = true, repeating = true })
+hl.bind("XF86MonBrightnessDown",hl.dsp.exec_cmd("$HOME/.local/bin/rice-brightness down"),      { locked = true, repeating = true })
 
 -- Requires playerctl
 hl.bind("XF86AudioNext",  hl.dsp.exec_cmd("playerctl next"),       { locked = true })
@@ -439,18 +465,7 @@ hl.window_rule({
 	float = true,
 })
 
--- Rofi glass effect
-layerrule = {
-  "blur on, match:namespace rofi",
-}
-
--- Window rounding and blur (if Rofi uses a normal window)
-windowrule = {
-  {
-    name = "rofi-glass",
-    match = { class = "^(rofi)$" },
-    rounding = 20,
-    opacity = "0.92 0.85",
-    blur = "on",
-  },
-}
+-- Layer effects. NOTE: plain `layerrule = {...}` tables did nothing; use hl.layer_rule.
+hl.layer_rule({ name = "rofi-blur",    match = { namespace = "^rofi$" },    blur = true })
+hl.layer_rule({ name = "swaync-blur",  match = { namespace = "^swaync" },   blur = true })
+hl.layer_rule({ name = "wlogout-blur", match = { namespace = "^wlogout$" }, blur = true })

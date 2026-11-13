@@ -56,8 +56,9 @@ end
 
 local function set_wallpaper(img)
   if not img then return end
-  os.execute("hyprctl hyprpaper wallpaper " .. sh_quote("," .. img.path .. ",cover") .. " >/dev/null 2>&1 &")
-  swayimg.text.status = "Wallpaper set"
+  -- `wall set` sets hyprpaper and runs theme-apply, so the whole rice recolors.
+  os.execute("$HOME/.local/bin/wall set " .. sh_quote(img.path) .. " >/dev/null 2>&1 &")
+  swayimg.text.status = "Wallpaper + theme set"
 end
 
 local function trash(get_image)

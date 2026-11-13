@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# rice-restart — restart the visual shell without logging out
+set -uo pipefail
+
+pkill -x waybar 2>/dev/null
+pkill -x swaync 2>/dev/null
+pkill -x hyprpaper 2>/dev/null
+sleep 0.7
+
+setsid waybar   >/dev/null 2>&1 < /dev/null &
+setsid swaync   >/dev/null 2>&1 < /dev/null &
+setsid hyprpaper >/dev/null 2>&1 < /dev/null &
+
+sleep 1.2
+pgrep -x waybar >/dev/null && echo "waybar ok" || echo "waybar failed"
+pgrep -x swaync >/dev/null && echo "swaync ok" || echo "swaync failed"
+pgrep -x hyprpaper >/dev/null && echo "hyprpaper ok" || echo "hyprpaper failed"

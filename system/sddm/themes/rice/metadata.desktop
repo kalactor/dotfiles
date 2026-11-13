@@ -1,0 +1,14 @@
+[SddmGreeterTheme]
+Name=Rice
+Description=Minimal dark theme generated for this dotfiles rice
+Author=amit
+Copyright=(c) 2026, amit
+License=MIT
+Type=sddm-theme
+Version=1.0
+Website=
+Screenshot=
+MainScript=Main.qml
+ConfigFile=theme.conf
+Theme-Id=rice
+Theme-API=2.0

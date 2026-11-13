@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# rice-doctor — is the desktop installed, generated and running?
+set -uo pipefail
+
+ok()  { printf '  \033[32m✔\033[0m %s\n' "$1"; }
+bad() { printf '  \033[31m✘\033[0m %s\n' "$1"; }
+warn(){ printf '  \033[33m•\033[0m %s\n' "$1"; }
+
+echo "Commands:"
+for c in hyprctl waybar swaync swaync-client rofi wlogout wallust hyprpaper \
+         hyprlock hypridle sddm kitty vim grim slurp satty wl-copy cliphist \
+         gpu-screen-recorder swayimg jq notify-send powerprofilesctl pamixer \
+         gnome-keyring-daemon hyprsunset swayosd-server ddcutil hyprpicker \
+         qt6ct kvantummanager; do
+    command -v "$c" >/dev/null 2>&1 && ok "$c" || bad "$c missing"
+done
+
+echo "Services:"
+for s in hyprpolkitagent xdg-desktop-portal-hyprland pipewire wireplumber; do
+    systemctl --user is-active --quiet "$s" && ok "user/$s" || bad "user/$s inactive"
+done
+for s in NetworkManager bluetooth cups; do
+    systemctl is-active --quiet "$s" && ok "system/$s" || bad "system/$s inactive"
+done
+
+echo "Processes:"
+for p in Hyprland waybar swaync hyprpaper hypridle; do
+    pgrep -x "$p" >/dev/null && ok "$p running" || bad "$p not running"
+done
+pgrep -x udiskie >/dev/null && ok "udiskie running" || warn "udiskie not running (optional)"
+
+echo "Waybar outputs:"
+if hyprctl layers -j 2>/dev/null | jq -e 'to_entries[] | select(.key=="DP-3") | .value.levels[][] | select(.namespace=="waybar")' >/dev/null; then
+    ok "waybar on DP-3"
+else
+    bad "waybar missing on DP-3"
+fi
+if hyprctl layers -j 2>/dev/null | jq -e 'to_entries[] | select(.key=="HDMI-A-1") | .value.levels[][] | select(.namespace=="waybar")' >/dev/null 2>&1; then
+    bad "waybar leaked onto HDMI-A-1"
+else
+    ok "no waybar on HDMI-A-1"
+fi
+
+echo "Generated theme files:"
+for f in "$HOME/.config/waybar/colors.css" \
+         "$HOME/.config/swaync/colors.css" \
+         "$HOME/.config/hypr/colors.lua" \
+         "$HOME/.config/hypr/hyprlock-colors.conf" \
+         "$HOME/.config/kitty/colors.conf" \
+         "$HOME/.config/rofi/colors.rasi" \
+         "$HOME/.config/gtk-3.0/gtk.css" \
+         "$HOME/.config/gtk-4.0/gtk.css" \
+         "$HOME/.vim/colors/wallust.vim" \
+         "$HOME/.config/wlogout/colors.css"; do
+    [ -s "$f" ] && ok "${f#$HOME/}" || bad "${f#$HOME/} missing"
+done
+
+echo "Hyprland config:"
+if [ -z "$(hyprctl configerrors 2>/dev/null)" ]; then
+    ok "hyprctl configerrors clean"
+else
+    bad "hyprctl configerrors not clean"
+    hyprctl configerrors
+fi
+
+echo "Symlinks:"
+for p in hypr waybar kitty swaync rofi wallust swayimg wlogout rice; do
+    [ -L "$HOME/.config/$p" ] && ok "~/.config/$p -> $(readlink "$HOME/.config/$p")" || bad "~/.config/$p is not a symlink"
+done
+[ -L "$HOME/.vimrc" ] && ok "~/.vimrc -> $(readlink "$HOME/.vimrc")" || bad "~/.vimrc is not a symlink"

@@ -1,18 +1,6 @@
-@import "colors.css"
+@import "colors.css";
 
 :root {
-  --cc-bg: rgba(46, 46, 46, 0.7);
-  --noti-border-color: rgba(255, 255, 255, 0.15);
-  --noti-bg: 48, 48, 48;
-  --noti-bg-alpha: 0.8;
-  --noti-bg-darker: rgb(38, 38, 38);
-  --noti-bg-hover: rgb(56, 56, 56);
-  --noti-bg-focus: rgba(68, 68, 68, 0.6);
-  --noti-close-bg: rgb(78, 78, 78);
-  --noti-close-bg-hover: rgb(94, 94, 94);
-  --text-color: rgb(255, 255, 255);
-  --text-color-disabled: rgb(150, 150, 150);
-  --bg-selected: rgb(0, 128, 255);
   --notification-icon-size: 64px;
   --notification-app-icon-size: calc(var(--notification-icon-size) / 3);
   --notification-group-icon-size: 32px;
@@ -29,21 +17,6 @@
   --group-collapse-transition: var(--group-collapse-tranistion);
 }
 
-/* Fallback for older CSS themes */
-/* Fallback for older CSS themes */
-@define-color cc-bg rgba(46, 46, 46, 0.7);
-@define-color noti-border-color rgba(255, 255, 255, 0.15);
-@define-color noti-bg rgba(48, 48, 48, 0.8);
-@define-color noti-bg-opaque rgb(48, 48, 48);
-@define-color noti-bg-darker rgb(38, 38, 38);
-@define-color noti-bg-hover rgb(56, 56, 56);
-@define-color noti-bg-hover-opaque rgb(56, 56, 56);
-@define-color noti-bg-focus rgba(68, 68, 68, 0.6);
-@define-color noti-close-bg rgba(255, 255, 255, 0.1);
-@define-color noti-close-bg-hover rgba(255, 255, 255, 0.15);
-@define-color text-color rgb(255, 255, 255);
-@define-color text-color-disabled rgb(150, 150, 150);
-@define-color bg-selected rgb(0, 128, 255);
 notificationwindow, blankwindow {
   background: transparent;
 }
@@ -89,7 +62,7 @@ notificationwindow, blankwindow {
   border: var(--border);
   padding: 0;
   transition: var(--hover-tranistion);
-  background: rgba(var(--noti-bg), var(--noti-bg-alpha));
+  background: var(--noti-bg);
 }
 
 .notification-row .notification-background .notification.low {
@@ -210,7 +183,7 @@ notificationwindow, blankwindow {
 
 .notification-row .notification-background .notification .notification-default-action .notification-content .inline-reply .inline-reply-button {
   margin-left: 4px;
-  background: rgba(var(--noti-bg), var(--noti-bg-alpha));
+  background: var(--noti-bg);
   border: var(--border);
   border-radius: var(--border-radius);
   color: var(--text-color);
@@ -302,7 +275,7 @@ notificationwindow, blankwindow {
 }
 
 .notification-group.collapsed .notification-row .notification {
-  background-color: rgba(var(--noti-bg), 1);
+  background-color: var(--noti-bg);
 }
 
 .notification-group.collapsed .notification-row:not(:last-child) {
@@ -564,13 +537,48 @@ notificationwindow, blankwindow {
 
 
 .control-center {
-  background: alpha(@background, 0.92);
+  background: var(--cc-bg);
   border-radius: 14px;
   color: @foreground;
 }
 .notification-background .notification {
-  background: alpha(@background, 0.92);
-  border: 2px solid @color4;
+  background: var(--noti-bg);
+  border: 1px solid var(--noti-border-color);
   border-radius: 12px;
   color: @foreground;
+}
+
+/* Theme the stock GTK buttons/switches so they do not fall back to light Adwaita */
+.widget-title > button {
+  background: var(--noti-bg);
+  color: var(--text-color);
+  border: 1px solid var(--noti-border-color);
+  box-shadow: none;
+  text-shadow: none;
+}
+.widget-title > button:hover {
+  background: var(--noti-bg-hover);
+  border-color: @color3;
+}
+.widget-dnd switch {
+  background: var(--noti-bg);
+  border: 1px solid var(--noti-border-color);
+  box-shadow: none;
+}
+.widget-dnd switch:checked {
+  background: @color3;
+  border-color: @color3;
+}
+.widget-dnd switch > slider {
+  background: @foreground;
+  box-shadow: none;
+}
+.widget-buttons-grid flowboxchild > button {
+  background: var(--noti-bg);
+  color: var(--text-color);
+  border: 1px solid var(--noti-border-color);
+  box-shadow: none;
+}
+.widget-buttons-grid flowboxchild > button:hover {
+  background: var(--noti-bg-hover);
 }

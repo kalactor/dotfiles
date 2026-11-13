@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# usage: theme-apply IMAGE
+# One wallpaper change recolors every app: wallust -> all templates -> reload.
+set -uo pipefail
+
+img="${1:?usage: theme-apply IMAGE}"
+[ -f "$img" ] || { notify-send -u critical "theme-apply" "No such image: $img"; exit 1; }
+
+# 1. Generate every target listed in wallust.toml
+if ! wallust run "$img" >/dev/null 2>&1; then
+  notify-send -u critical "theme-apply" "wallust failed for $img"
+  exit 1
+fi
+
+# 2. Reload apps that do not watch their own config
+hyprctl reload >/dev/null 2>&1 || true          # Hyprland border colors
+pkill -SIGUSR1 kitty 2>/dev/null || true        # kitty reloads its config
+swaync-client -rs >/dev/null 2>&1 || true       # SwayNC reloads CSS
+# Waybar reloads colors.css on its own (reload_style_on_change)
+
+# 3. User hooks: every executable in the folder gets the image path as $1
+hooks="$HOME/.config/rice/hooks/theme-set.d"
+if [ -d "$hooks" ]; then
+  for h in "$hooks"/*; do
+    [ -x "$h" ] && "$h" "$img" || true
+  done
+fi

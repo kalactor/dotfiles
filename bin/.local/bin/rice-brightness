@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# usage: rice-brightness up|down|set VALUE
+# Controls DP-3 over DDC/CI (ddcutil). STEP overrides the 5% step.
+set -uo pipefail
+
+step="${STEP:-5}"
+
+# Find the ddcutil display number for DP-3
+disp=$(ddcutil detect --brief 2>/dev/null | awk '
+  /^Display [0-9]+/ { n=$2 }
+  /DRM connector:.*DP-3/ { print n; exit }
+')
+disp="${disp:-1}"
+
+cur=$(ddcutil getvcp 10 --display "$disp" 2>/dev/null | sed -n 's/.*current value = *\([0-9]*\).*/\1/p')
+[ -z "${cur:-}" ] && cur=50
+
+case "${1:-}" in
+  up)   new=$((cur + step)) ;;
+  down) new=$((cur - step)) ;;
+  set)  new="${2:-$cur}" ;;
+  *)    echo "usage: rice-brightness up|down|set VALUE"; exit 1 ;;
+esac
+
+[ "$new" -lt 1 ] && new=1
+[ "$new" -gt 100 ] && new=100
+
+if ! ddcutil setvcp 10 "$new" --display "$disp" >/dev/null 2>&1; then
+  notify-send -u low "Brightness" "ddcutil failed on display $disp (i2c permissions?)"
+  exit 1
+fi

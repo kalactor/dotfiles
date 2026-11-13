@@ -10,7 +10,7 @@ n=${#files[@]}
 
 set_wall() {
 	hyprctl hyprpaper wallpaper ",$1,$FIT";
-	wallust run "$1" >/dev/null 2>&1
+	"$HOME/.local/bin/theme-apply" "$1"
 }
 
 cur=$(hyprctl hyprpaper listactive | head -n1 | sed 's/^[^:]*: *//')

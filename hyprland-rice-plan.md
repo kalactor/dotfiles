@@ -31,12 +31,12 @@
 | OS / kernel | Arch Linux rolling; Linux `7.2.15-arch1-1`; installed `linux` package is `7.2.15.arch1-1` (matches running kernel) |
 | CPU / RAM / GPU | Intel i5-9400F (6 cores), 15.55 GiB RAM, NVIDIA GTX 1660 6 GB (`nvidia-open 615.78.08`), `nvidia_drm.modeset=Y`, `nvidia-smi` works |
 | Disk / boot | ext4 on `/dev/nvme0n1p2`, 456 GiB total; systemd-boot; Secure Boot enabled |
-| Packages | 972 total; 101 explicitly installed native; 14 AUR (including `yay`, `wallust`, `wlogout`, `wttrbar`, `google-chrome`) |
+| Packages | 1017 total; 123 explicitly installed native; 14 AUR (including `yay`, `wallust`, `wlogout`, `wttrbar`, `google-chrome`) |
 | Login | **SDDM 0.21.0** enabled + active; X11 greeter (`Xorg`), **no theme configured**; starts **Hyprland 0.57.2** via `/usr/bin/start-hyprland` (no UWSM) |
-| Session | Hyprland 0.57.2 Wayland session on tty1; `hyprctl configerrors` is clean; 61 keybinds loaded |
-| Monitors | `DP-3` 1920x1080@143.85 at `0x0` (primary/focused); `HDMI-A-1` 1920x1080@60 at `0x-1080`; Waybar reserves 38 px at the top of `DP-3` only |
-| Running | waybar, swaync, hyprpaper, hypridle, nm-applet, Telegram, PipeWire/WirePlumber, NetworkManager, Bluetooth, CUPS, gnome-keyring |
-| Not running | `hyprpolkitagent` (failed), `xdg-desktop-portal-hyprland` (failed), `udiskie` (installed, not started), `hyprlock` (idle, expected) |
+| Session | Hyprland 0.57.2 Wayland session on tty1; `hyprctl configerrors` is clean; 65 keybinds loaded |
+| Monitors | `DP-3` 1920x1080@165 at `0x0` (primary/focused); `HDMI-A-1` 1920x1080@60 at `0x-1080`; Waybar reserves 38 px at the top of `DP-3` only |
+| Running | waybar, swaync, hyprpaper, hypridle, nm-applet, hyprpolkitagent, xdg-desktop-portal-hyprland, swayosd-server, Telegram, PipeWire/WirePlumber, NetworkManager, Bluetooth, CUPS, gnome-keyring |
+| Not running | `udiskie` (installed, not started), `hyprlock` (idle, expected) |
 
 ### Decisions locked in
 
@@ -51,7 +51,7 @@
 
 - Hyprland Lua config loads with no errors; monitors are positioned correctly; numlock is on; float rules for Satty/swayimg/pavucontrol/Blueman work.
 - Screenshots (grim + slurp + Satty), screen recording (gpu-screen-recorder + Waybar indicator), wallpaper script, Waybar, SwayNC, hyprpaper and hypridle are running.
-- wallust generates `~/.config/waybar/colors.css` and `~/.config/swaync/colors.css`.
+- wallust generates 9 targets from one wallpaper: Waybar, SwayNC, Hyprland, hyprlock, kitty, rofi, GTK 3/4, vim, wlogout.
 - Audio (PipeWire/WirePlumber), NetworkManager, Bluetooth, CUPS, zram swap, timezone/NTP and GNOME keyring PAM unlock work.
 - vim is the default text editor; kitty is the terminal; SDDM successfully starts Hyprland.
 
@@ -59,24 +59,24 @@
 
 | # | Finding | Evidence / impact | Plan action |
 |---|---|---|---|
-| 1 | **Polkit agent and Hyprland portal fail at login** | `systemctl --user --failed` lists `hyprpolkitagent.service` and `xdg-desktop-portal-hyprland.service`; logs say `wl_display_connect failed` / `Couldn't connect to a wayland compositor` at 11:37:23, before the Hyprland socket existed; both hit `start-limit-hit` | Start/restart them after Hyprland is up; add `dbus-update-activation-environment`; test screen sharing |
-| 2 | **Waybar is Omarchy-derived** | `config.jsonc` calls `omarchy-*` and `$OMARCHY_PATH` (unset); `waybar-module-pacman-updates` missing; `custom/voxtype`, `custom/idle-indicator`, `custom/notification-silencing-indicator`, `custom/screenrecording-indicator` are dead; `battery`/`backlight` are desktop-irrelevant | Replace with local scripts or remove; keep one clean bar, on `DP-3` only |
-| 3 | **`wall` name collides** | `command -v wall` resolves to `/usr/bin/wall`; `~/.local/bin` is last in `PATH`; keybinds use `$HOME/.local/bin/wall` so they work, terminal `wall` does not | Rename to `rice-wall` or put `~/.local/bin` before `/usr/bin` |
-| 4 | **hyprpaper rotates by itself** | `hyprpaper.conf` points at a directory with `timeout = 600`, `order = random`; `wall` calls `wallust` directly | Set one path, disable self-rotation, make `wall` call `theme-apply` |
-| 5 | **Dead Lua rules** | End of `hyprland.lua` assigns `layerrule = {...}` and `windowrule = {...}` as plain Lua globals; only `hl.layer_rule`/`hl.window_rule` create rules | Rewrite with the real API; the rofi glass rules are currently not applied |
-| 6 | **`Super+M` exit is broken** | `hyprshutdown` is not installed; fallback `hyprctl dispatch 'hl.dsp.exit()'` is invalid | Install `hyprshutdown` or bind `hyprctl dispatch exit` |
-| 7 | **Keybind map differs from the old plan** | Actual lock is `Super+L` (not `Super+Shift+L`); power menu is `Super+Backspace` -> wlogout (not `Super+Escape`); no DND bind | Use section 6 below |
-| 8 | **Theming is only partial** | wallust has 2 targets (Waybar, SwayNC); Hyprland, rofi, kitty, hyprlock, GTK, Qt, vim and SDDM are hardcoded/unthemed | Add templates + `theme-apply` |
-| 9 | **Semantic red is dynamic** | `waybar/style.css` has `@define-color red @color3` | Use a fixed red for muted/errors |
+| 1 | **Polkit agent and Hyprland portal fail at login** | **Resolved 2026-11-12:** both services active; autostart runs `dbus-update-activation-environment` + `reset-failed`/`start` after the socket exists | Done |
+| 2 | **Waybar is Omarchy-derived** | **Resolved:** all `omarchy-*`/`$OMARCHY_PATH` refs removed; dead modules deleted; one clean bar on `DP-3` only | Done |
+| 3 | **`wall` name collides** | **Resolved:** `~/.local/bin` first in `.bashrc`; `command -v wall` -> `~/.local/bin/wall`; keybinds and `swayimg` use absolute paths | Done |
+| 4 | **hyprpaper rotates by itself** | **Resolved:** single-file path; `timeout`/`order = random` removed; `wall` calls `theme-apply` | Done |
+| 5 | **Dead Lua rules** | **Resolved:** replaced with `hl.layer_rule` (rofi, swaync, wlogout blur) | Done |
+| 6 | **`Super+M` exit is broken** | **Resolved:** bound to `hyprshutdown` | Done |
+| 7 | **Keybind map differs from the old plan** | **Resolved:** lock `Super+L`, power `Super+Backspace`, DND `Super+Shift+N`, clipboard `Super+Shift+V`, picker `Super+Shift+C` | Done |
+| 8 | **Theming is only partial** | **Resolved:** 9 wallust targets + `theme-apply`; Hyprland, Waybar, SwayNC, rofi, kitty, hyprlock, GTK, vim, wlogout recolored; Qt fixed via Kvantum | SDDM remains |
+| 9 | **Semantic red is dynamic** | **Resolved:** `@red = #e06c75`, `@accent = @color3` | Done |
 | 10 | **No dotfiles safety net** | **Resolved 2026-11-12:** `~/dotfiles` is a git repo; configs are stowed; package lists and `system/etc/` copies saved | Phase 0 done |
-| 11 | **Missing utilities** | `cliphist`, `hyprpicker`, `hyprsunset`, `swayosd`, `ddcutil`, `qt6ct`, `kvantum`, `nwg-look`, `papirus-icon-theme`, `noto-fonts-cjk`, `fzf`, `zoxide`, `eza`, `bat`, `btop`, `cava`, `hyprshutdown`, `waybar-module-pacman-updates` | Install only what each phase needs |
+| 11 | **Missing utilities** | **Mostly resolved:** `cliphist`, `hyprpicker`, `hyprsunset`, `swayosd`, `ddcutil`, `qt6ct`, `kvantum`, `papirus-icon-theme`, `noto-fonts-cjk`, `hyprshutdown` installed. Still optional: `fzf`, `zoxide`, `eza`, `bat`, `btop`, `cava`, `nwg-look`, `waybar-module-pacman-updates` | Optional polish |
 | 12 | **SDDM is unthemed** | No `/etc/sddm.conf` or `/etc/sddm.conf.d`; log says "Loaded empty theme configuration"; X11 greeter; only `elarun`, `maldives`, `maya` themes installed; `weston` absent | Choose a theme; keep X11 greeter or install `weston` for a Wayland greeter |
-| 13 | **GTK/Qt/fonts are not unified** | gsettings is `Adwaita`/`default`; `~/.config/gtk-3.0` and `gtk-4.0` are empty; no Qt platform theme; Waybar/rofi use JetBrainsMono, kitty uses CaskaydiaCove, GTK uses Adwaita Sans | Phase 4 static choices |
-| 14 | **Workspace/monitor rules are incomplete** | Only workspaces 1-3 default to `DP-3`; no 4-10 rules; `DP-3` runs 143.85 Hz although 165 Hz is available | Decide 1-5/6-10 and an explicit mode |
+| 13 | **GTK/Qt/fonts are not unified** | **Resolved:** Adwaita-dark + Papirus-Dark + Inter; gsettings and `settings.ini` set; Qt uses qt6ct + Kvantum `KvArcDark`; kitty switched to JetBrainsMono | Done |
+| 14 | **Workspace/monitor rules are incomplete** | **Resolved:** 1-5 -> `DP-3`, 6-10 -> `HDMI-A-1`; `DP-3` runs 1920x1080@165 | Done |
 | 15 | **Idle/suspend behavior needs a decision** | hypridle locks at 5 min, DPMS off at 5.5 min, suspends at 30 min; NVIDIA suspend/resume units are disabled | Decide desktop suspend; enable NVIDIA services if keeping it |
-| 16 | **Some configs are missing** | No `~/.config/user-dirs.dirs`, no `~/.config/starship.toml`, no `~/.config/mpv/mpv.conf`, no `~/.config/chrome-flags.conf`; `~/.vimrc` absent but `~/.vim/vimrc` exists | Add in phases 4/5 |
-| 17 | **SwayNC CSS import is suspect** | `@import "colors.css"` has no semicolon; most colors are hardcoded | Fix the import and use generated colors |
-| 18 | **swayimg `w` does not recolor** | `init.lua` calls `hyprctl hyprpaper wallpaper` only; no wallust/theme-apply | Call `wall set` or `theme-apply` |
+| 16 | **Some configs are missing** | **Partly resolved:** `~/.config/user-dirs.dirs` and `~/.vimrc` exist. Still missing: `starship.toml`, `mpv.conf`, `chrome-flags.conf` | Optional Phase 5 |
+| 17 | **SwayNC CSS import is suspect** | **Resolved:** `@import "colors.css";` fixed; dedicated template defines every var; buttons/switches themed | Done |
+| 18 | **swayimg `w` does not recolor** | **Resolved:** `init.lua` calls `$HOME/.local/bin/wall set <path>` | Done |
 
 ### Missing packages relevant to this plan
 
@@ -215,38 +215,38 @@ require("autostart")
 - [ ] Config split into modules (`env`, `monitors`, `input`, `look`, `rules`, `binds`, `autostart`) — currently one **456-line** file
 - [x] Lua autocomplete: `~/.config/hypr/.luarc.json` points to `/usr/share/hypr/stubs` with `globals: ["hl"]`
 - [x] How Hyprland starts decided: **SDDM** -> `/usr/bin/start-hyprland` (UWSM not installed; `hyprland-uwsm.desktop` unused)
-- [~] Environment: `XCURSOR_SIZE`/`HYPRCURSOR_SIZE` set; **no NVIDIA/Qt/cursor-theme vars** in an `env.lua` yet
-- [~] Monitors: explicit positions match reality (`DP-3 0x0`, `HDMI-A-1 0x-1080`); workspace rules only 1-3 -> `DP-3`, no 4-10 rules; `DP-3` runs 143.85 Hz though 165 Hz is available
+- [x] Environment: `XCURSOR_SIZE`/`HYPRCURSOR_SIZE`/`XCURSOR_THEME` set; NVIDIA (`LIBVA_DRIVER_NAME`, `__GLX_VENDOR_LIBRARY_NAME`, `NVD_BACKEND`, `GBM_BACKEND`) and Qt (`QT_QPA_PLATFORMTHEME=qt6ct`, `QT_STYLE_OVERRIDE=kvantum`) vars added
+- [x] Monitors: `DP-3` 1920x1080@165 at `0x0`, `HDMI-A-1` at `0x-1080`; workspace rules 1-5 -> `DP-3`, 6-10 -> `HDMI-A-1`
 - [x] Input: `numlock_by_default = true`; keyboard layout `us`
 - [ ] Optional Hindi layout + switch key
-- [~] Autostart: waybar, swaync, hyprpaper, hypridle, nm-applet, Telegram, polkit start command; **polkit fails** (see snapshot); no clipboard watcher
-- [ ] `dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE` at start (systemd user env currently has these, but make it explicit)
+- [x] Autostart: dbus activation env, polkit/portal reset+start, clipboard watchers, swayosd-server, nm-applet, waybar, swaync, hyprpaper, Telegram, hypridle
+- [x] `dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE` runs at `hyprland.start`
 - [x] Float rule for utility windows (`satty`, `swayimg`, `pavucontrol`, `blueman-manager`, `nm-connection-editor`); text editor not included
 - [~] Window rules: suppress-maximize, XWayland fix, hyprland-run, float apps; no per-app opacity/workspace/no-blur/no-shadow
-- [ ] Layer rules: the `layerrule`/`windowrule` blocks at the end of `hyprland.lua` are plain Lua globals and **do nothing**; rewrite with `hl.layer_rule`/`hl.window_rule`
-- [ ] Keybind module: all 61 binds in one file; no duplicates detected, but not split; `Super+M` exit is broken (`hyprshutdown` missing)
-- [~] Safety habit: `hyprctl configerrors` is clean right now; no known-good git tag yet
-- [ ] Keep a `known-good` git tag of the config (no git repo yet)
+- [x] Layer rules: replaced the dead globals with `hl.layer_rule` (rofi, swaync, wlogout blur)
+- [~] Keybind module: 65 binds in one file; `Super+M` fixed to `hyprshutdown`; clipboard, color picker, night light and OSD binds added; not split
+- [x] Safety habit: `hyprctl configerrors` clean after each change; known-good tags created
+- [x] `known-good` git tags of the config
 
 ### Phase 2: Session plumbing (things that must just work)
-- [~] Portals: `xdg-desktop-portal-hyprland` + `xdg-desktop-portal-gtk` installed; **Hyprland portal failed** (`Couldn't connect to a wayland compositor`, start-limit-hit); only the GTK portal is running. Test screen sharing after fixing startup order
-- [ ] Polkit agent: `hyprpolkitagent` installed, but **failed** (`wl_display_connect failed`, start-limit-hit); no agent running. Start after Hyprland is up / `systemctl --user reset-failed` + restart
+- [x] Portals: `xdg-desktop-portal-hyprland` + `xdg-desktop-portal-gtk` active; autostart resets failed units after the Hyprland socket exists
+- [x] Polkit agent: `hyprpolkitagent` active; autostart runs `reset-failed` + `start`
 - [x] Keyring: `gnome-keyring` running; SDDM PAM log says "unlocked login keyring"; `seahorse` installed
 - [x] Audio: PipeWire + WirePlumber running, `pavucontrol`, `pamixer`
 - [x] Bluetooth: `bluez`, `bluez-utils`, `blueman` installed; service active (blueman applet not running; Waybar module works)
 - [x] Network: NetworkManager active, `nm-applet` running, Waybar `network` module
 - [x] Power profiles daemon installed (`powerprofilesctl get` -> `performance`)
 - [x] Idle: `hypridle` running (lock 5 min, DPMS off 5.5 min, suspend 30 min)
-- [~] Lock: `hyprlock` installed/configured, not tested; uses fixed colors
-- [~] Monitor brightness: `brightnessctl` installed; **`ddcutil` missing** for external monitors (DDC/CI)
-- [ ] Clipboard history: **`cliphist` missing**; `wl-clipboard` installed and used by screenshots
+- [x] Lock: `hyprlock` configured with wallust colors and visually tested; recover with `hyprctl --instance 0 eval 'hl.clear_crashed_lockscreen()'`
+- [x] Monitor brightness: `ddcutil` installed; `rice-brightness` controls DP-3 over DDC/CI (HDMI-A-1 is not DDC-capable)
+- [x] Clipboard history: `cliphist` installed; `wl-paste` watchers autostart; `Super+Shift+V` opens `rice-clipboard`
 - [x] `wl-clipboard` installed
 - [~] Removable drives: `udisks2` installed; `udiskie` installed but **not running**
 - [~] File manager extras: **Dolphin** (not Thunar) + `dolphin-plugins`, `gvfs`, `kio-extras`, `ark` installed; `tumbler`/`thunar-volman` not needed
-- [~] XDG user dirs + default apps: `mimeapps.list` sets Chrome, vim, swayimg, mpv; **`xdg-user-dirs` package is missing** and `~/.config/user-dirs.dirs` does not exist
+- [x] XDG user dirs + default apps: `xdg-user-dirs` installed and configured; `mimeapps.list` sets Chrome, vim, swayimg, mpv
 - [x] Printing: CUPS active + enabled (if needed)
 - [ ] NVIDIA suspend/resume services if you keep suspend: `nvidia-suspend`, `nvidia-resume` are disabled; `hypridle` suspends at 30 min
-- [ ] Autostart order check: portals and polkit currently start before the Hyprland socket and fail; fix order
+- [x] Autostart order check: dbus env + `reset-failed`/`start` for portals and polkit now run after Hyprland is up
 
 ### Phase 3: Desktop shell components
 **Bar: Waybar**
@@ -259,66 +259,66 @@ require("autostart")
 **Notifications: SwayNC**
 - [x] SwayNC is the notification daemon (running)
 - [x] `config.json` + `style.css` + `Super+N` toggle; widgets: title, DND, mpris, notifications
-- [ ] DND keybind (`Super+Shift+N` planned; `swaync-client -d`)
-- [~] `colors.css` generated, but `style.css` `@import "colors.css"` is missing a semicolon and most colors are hardcoded; fix
+- [x] DND keybind (`Super+Shift+N` -> `swaync-client -d`)
+- [x] `colors.css` generated from a dedicated template; `@import "colors.css";` fixed; hardcoded palette replaced with generated vars; panel pinned to DP-3
 
 **Launcher and menus: rofi**
 - [x] rofi installed; `Super+A` opens `rofi -show drun`
-- [~] App launcher theme exists but is hardcoded Catppuccin; no `colors.rasi` import
+- [x] App launcher imports generated `colors.rasi`; opens on the focused monitor (`monitor: "-1"`)
 - [x] Wallpaper picker with thumbnails (`wall pick`)
 - [~] Power menu: **wlogout** is installed and bound to `Super+Backspace`; the planned rofi `power-menu` is not implemented (keep wlogout or switch)
-- [ ] Clipboard picker (`cliphist` missing)
+- [x] Clipboard picker (`Super+Shift+V` -> `rice-clipboard`)
 - [ ] Emoji / calculator modes
 - [ ] Keybind cheat sheet in rofi (generate from `binds.lua`)
 
 **Wallpaper**
 - [x] hyprpaper running; `wall` script supports next / prev / random / set / pick
-- [ ] hyprpaper `path` set to one file so it does **not** rotate by itself — currently directory + `timeout = 600` + `order = random`
-- [ ] Timed rotation via `wall random` (currently hyprpaper rotates independently)
+- [x] hyprpaper `path` set to one file; self-rotation (`timeout`, `order = random`) removed
+- [ ] Optional timed rotation via `wall random` (hyprpaper no longer rotates independently)
 - [~] Wallpaper collection in `~/Pictures/walls/` (20 files, flat; no mood subfolders)
 
 **Capture and tools**
 - [x] Screenshots: grim + slurp + satty (region, full, monitor, window)
 - [x] Screen recording: gpu-screen-recorder with Waybar indicator (`custom/recorder`) and toggle bind
 - [x] Floating swayimg / satty windows
-- [~] swayimg `init.lua` exists; `w` sets wallpaper via hyprpaper but **does not run wallust/theme-apply**
-- [ ] Color picker: `hyprpicker` missing
+- [x] swayimg `init.lua`; `w` calls `wall set`, so the wallpaper and the whole theme update
+- [x] Color picker: `hyprpicker` installed; `Super+Shift+C` copies the hex
 - [ ] Optional: freeze screen while selecting (`wayfreeze` missing)
-- [ ] Night light: `hyprsunset`/`wlsunset` missing
+- [x] Night light: `hyprsunset` installed; `Super+Shift+F10` toggles `rice-nightlight`
 
 **OSD and extras**
-- [ ] On-screen display for volume, brightness, caps/num lock (`swayosd` missing)
+- [x] On-screen display: `swayosd` installed; volume/mic keys use `swayosd-client` (brightness stays on DDC)
 - [ ] Optional dock (`nwg-dock-hyprland`)
 - [ ] Optional hot reload helper: `rice-restart` (missing)
 
 ### Phase 4: Theming engine (color *every* aspect)
 **Engine**
 - [x] `wallust` installed (3.5.2, AUR)
-- [~] Templates: only `waybar-colors.css` exists; it drives Waybar + SwayNC
-- [~] `~/.config/wallust/wallust.toml` has only 2 targets (Waybar, SwayNC)
-- [ ] `theme-apply` script created (missing) and **`wall` calls it**
-- [ ] Hooks folder `~/.config/rice/hooks/theme-set.d/` created
-- [x] First run: `wallust run <image>` has generated `~/.config/waybar/colors.css` and `~/.config/swaync/colors.css`
-- [ ] swayimg `w` key calls `wall set <path>` so it recolors too
-- [ ] Add templates/targets for Hyprland (`colors.lua`), rofi (`colors.rasi`), kitty, hyprlock, GTK 3/4, vim, btop/cava (if used)
+- [x] Templates: 9 targets — Waybar, SwayNC, Hyprland, hyprlock, kitty, rofi, GTK 3/4, vim, wlogout
+- [x] `~/.config/wallust/wallust.toml` has 9 targets
+- [x] `theme-apply` created and **`wall` calls it** (absolute path, works with Hyprland's PATH)
+- [x] Hooks folder `~/.config/rice/hooks/theme-set.d/` created and stowed
+- [x] First run: `wallust run <image>` has generated every target
+- [x] swayimg `w` key calls `wall set <path>` so it recolors too
+- [x] Templates/targets for Hyprland (`colors.lua`), rofi (`colors.rasi`), kitty, hyprlock, GTK 3/4, vim, wlogout (btop/cava not installed)
 
 **Static (not wallpaper-driven) choices: decide once**
-- [ ] GTK base theme + dark mode (`nwg-look` missing; gsettings currently `Adwaita`/`default`)
-- [ ] Icon theme (currently `Adwaita`; `papirus-icon-theme` missing)
-- [~] Cursor theme + size: size 24 set in Hyprland; `XCURSOR_THEME`/`HYPRCURSOR_THEME` not set; gsettings cursor `default`
-- [ ] Qt apps: `qt6ct` + Kvantum missing; `QT_QPA_PLATFORMTHEME` not set
-- [~] UI/monospace fonts: JetBrainsMono Nerd Font, CaskaydiaCove Nerd Font and Inter installed, but used inconsistently (Waybar/rofi JetBrainsMono, kitty CaskaydiaCove, GTK Adwaita Sans); `noto-fonts-cjk` missing
-- [~] Hyprland look: rounding 10, gaps 4/8, blur/shadow/animations on; `border_size = 0` so no gradient border; colors fixed, not wallust
+- [x] GTK base theme + dark mode: `Adwaita-dark`, `prefer-dark`, gsettings + `settings.ini`
+- [x] Icon theme: `Papirus-Dark`
+- [x] Cursor theme + size: Adwaita, size 24 (Hyprland + gsettings)
+- [x] Qt apps: `qt6ct` + Kvantum `KvArcDark`; `QT_QPA_PLATFORMTHEME=qt6ct`
+- [x] UI/monospace fonts: JetBrainsMono Nerd Font (kitty, Waybar, rofi, hyprlock), Inter (GTK), Noto CJK installed
+- [x] Hyprland look: `border_size = 2`, gradient borders from wallust, rounding/gaps/blur/shadows/animations
 - [~] Per-app opacity: only global active 0.90 / inactive 0.85; no per-app values
 - [x] Terminal: **kitty** chosen and running (0.50.0, CaskaydiaCove NF, bash)
-- [ ] Kitty colors from wallust (`include` a generated file; current palette is hardcoded)
+- [x] Kitty colors from wallust (`include ~/.config/kitty/colors.conf`; verified with `kitty @ get-colors`)
 - [~] Prompt (`starship`) + shell toys: starship installed but **no `starship.toml`** and bash PS1 is plain; `fzf`, `zoxide`, `eza`, `bat`, `btop`, `cava` missing
 - [~] Browser: Chrome 157 installed/default; **no `~/.config/chrome-flags.conf`**; dark mode/theme pending
 - [x] Editor: **vim** chosen and default for `text/plain`; `~/.vim/vimrc` has vim-plug + coc.nvim
-- [ ] Vim colorscheme/theme from wallust or a fixed theme
-- [ ] Login screen / greeter: **SDDM** active, but no theme configured (`Loaded empty theme configuration`, X11 greeter, default themes only); pick/install a theme; optionally install `weston` for a Wayland greeter
+- [x] Vim colorscheme from wallust; verified `:hi Normal` uses the generated palette
+- [ ] Login screen / greeter: **SDDM** active, no theme configured (X11 greeter). Handoff commands prepared in `system/sddm/README.md`
 - [ ] Boot splash (Plymouth not installed; systemd-boot)
-- [~] Lock screen: `hyprlock` configured (blurred screenshot, JetBrainsMono) but fixed colors and not tested
+- [x] Lock screen: `hyprlock` configured (blurred screenshot, JetBrainsMono) with generated colors and tested
 
 ### Phase 5: Apps and utilities
 - [x] File manager: **Dolphin** installed/configured (dolphinrc, kiorc, ark, gvfs, dolphin-plugins); replace the old Thunar plan
@@ -341,12 +341,12 @@ require("autostart")
 - [x] **No Quickshell** — decision locked; stay with Waybar/SwayNC/rofi/wlogout. Do not add Caelestia/end-4/ML4W Quickshell layers
 
 ### Phase 7: Maintenance and safety net
-- [ ] `rice-doctor` health-check script installed (missing; section 5)
+- [x] `rice-doctor` health-check script installed (commands, services, generated files, Waybar outputs, config errors)
 - [ ] Weekly routine: read Arch news, update, `hyprctl configerrors`, reboot test
-- [ ] One git commit per change, tag known-good states (no git repo yet)
+- [x] One git commit per change; `known-good` tags created
 - [ ] Restore test: re-stow on a fresh user or VM
-- [ ] Keybind cheat sheet and this checklist kept in `~/dotfiles/README.md` (README does not exist yet)
-- [~] Recovery notes: this plan has some; add TTY access, `hyprctl reload`, restore `hyprland.lua` from git, backup rollback
+- [x] Keybind cheat sheet and checklist in `~/dotfiles/README.md`
+- [x] Recovery notes: TTY access, `hyprctl reload`, `hl.clear_crashed_lockscreen()`, git rollback
 
 ---
 
@@ -356,25 +356,25 @@ Every row should end up driven by the wallpaper (✅ target) or deliberately fix
 
 | Aspect | How it gets its colors | Status |
 |---|---|---|
-| Hyprland borders, shadows | wallust template → `~/.config/hypr/colors.lua`, `require("colors")`, then `hyprctl reload` | [ ] fixed colors now |
+| Hyprland borders, shadows | wallust template → `~/.config/hypr/colors.lua`, `require("colors")`, then `hyprctl reload` | [x] generated + reloaded |
 | Waybar | template → `colors.css`, `@import "colors.css";` in `style.css` | [x] generated + imported |
-| SwayNC | same template → `~/.config/swaync/colors.css` + `swaync-client -rs` | [~] generated; import missing semicolon, style mostly hardcoded |
-| rofi | template → `colors.rasi`, `@import "colors.rasi"` in the theme | [ ] hardcoded Catppuccin |
-| wlogout / power menu | GTK CSS `@define-color` import (wlogout) or rofi theme | [~] wlogout installed; style hardcoded |
-| hyprlock | template → `hyprlock-colors.conf` sourced by `hyprlock.conf` | [ ] fixed colors |
-| Terminal (**kitty**) | template → `~/.config/kitty/colors.conf`, `include` it; reload kitty (`SIGUSR1`) | [ ] hardcoded fallback palette |
+| SwayNC | dedicated template → `~/.config/swaync/colors.css` + `swaync-client -rs` | [x] generated; import fixed; GTK buttons/switches themed |
+| rofi | template → `colors.rasi`, `@import "colors.rasi"` in the theme | [x] generated; state variables mapped |
+| wlogout / power menu | template → `wlogout/colors.css`, `@import "colors.css";` | [x] generated |
+| hyprlock | template → `hyprlock-colors.conf` sourced by `hyprlock.conf` | [x] generated + tested |
+| Terminal (**kitty**) | template → `~/.config/kitty/colors.conf`, `include` it; reload kitty (`SIGUSR1`) | [x] generated |
 | Shell prompt (starship) | generated palette file or fixed palette | [ ] starship installed, no config |
 | btop / cava / fastfetch | template into their theme/config files | [~] fastfetch installed; btop/cava missing |
-| GTK 3 / 4 apps (Dolphin, ...) | template → `~/.config/gtk-3.0/colors.css`, `gtk-4.0/colors.css` | [ ] empty dirs; Adwaita default |
-| Qt apps | `qt6ct` color scheme from a template, or a fixed Kvantum theme | [ ] qt6ct/Kvantum missing; no platform theme |
-| swayimg | `colors.lua` generated and loaded from `init.lua`, or fixed colors | [~] fixed Catppuccin in `init.lua` |
-| Editor (**vim**) | generated vim colorscheme or a fixed theme | [ ] no vim colorscheme yet |
+| GTK 3 / 4 apps (Dolphin, ...) | template → `~/.config/gtk-3.0/gtk.css`, `gtk-4.0/gtk.css` | [x] generated + Adwaita-dark/Papirus |
+| Qt apps | `qt6ct` color scheme from a template, or a fixed Kvantum theme | [x] qt6ct + Kvantum KvArcDark |
+| swayimg | `colors.lua` generated and loaded from `init.lua`, or fixed colors | [x] `w` calls `wall set` |
+| Editor (**vim**) | generated vim colorscheme or a fixed theme | [x] generated wallust colorscheme |
 | Browser | manual theme color / dark mode | [ ] Chrome default |
-| Cursor and icons | fixed | [ ] Adwaita/default |
-| Fonts | fixed | [~] installed but inconsistent |
-| **SDDM login screen** | theme + wallpaper/colors | [ ] no theme configured; X11 greeter |
+| Cursor and icons | fixed | [x] Adwaita cursor, Papirus-Dark |
+| Fonts | fixed | [x] JetBrainsMono + Inter + Noto CJK |
+| **SDDM login screen** | theme + wallpaper/colors | [ ] no theme configured; handoff in `system/sddm/README.md` |
 | Plymouth / bootloader | fixed theme or wallpaper sync (optional) | [ ] Plymouth not installed; systemd-boot |
-| Fixed semantic colors | `@red` for muted/errors stays red in every theme | [ ] current `@red` = `@color3` (dynamic) |
+| Fixed semantic colors | `@red` for muted/errors stays red in every theme | [x] `@red = #e06c75`; `@accent = @color3` |
 
 Template idea for Hyprland (check wallust docs for the exact filters; `strip` removes the `#`):
 ```lua
@@ -394,17 +394,17 @@ and in `look.lua`: `local ok, c = pcall(require, "colors")` then build `"rgba(" 
 
 | Script (in `~/.local/bin/`) | Purpose | Status |
 |---|---|---|
-| `wall` | next / prev / random / set FILE / pick (rofi thumbnails) | [x] working, but **name collides with `/usr/bin/wall`**; keybinds use `$HOME/.local/bin/wall`. Rename to `rice-wall` or fix PATH |
-| `theme-apply` | wallust + reload everything + run hooks (below) | [ ] missing |
+| `wall` | next / prev / random / set FILE / pick (rofi thumbnails) | [x] working; PATH puts `~/.local/bin` first; keybinds use `$HOME/.local/bin/wall`; calls `theme-apply` |
+| `theme-apply` | wallust + reload everything + run hooks | [x] created; reloads Hyprland, kitty, SwayNC, hooks |
 | `power-menu` | lock / logout / suspend / reboot / shutdown via rofi | [~] not needed now: **wlogout** is installed + bound to `Super+Backspace`; optional rofi version |
 | `gsr-toggle`, `gsr-status` | screen recording toggle + Waybar indicator | [x] working |
-| `rice-doctor` | health check (below) | [ ] missing |
-| `rice-restart` | restart waybar + swaync + hyprpaper cleanly | [ ] missing |
-| `cliphist` picker | rofi clipboard history | [ ] missing (`cliphist` not installed) |
+| `rice-doctor` | health check | [x] installed and green |
+| `rice-restart` | restart waybar + swaync + hyprpaper cleanly | [x] installed |
+| `rice-clipboard` | rofi clipboard history (`cliphist`) | [x] installed |
 | `keybinds` | rofi cheat sheet from `binds.lua` | [ ] missing |
 | `screenshot-*` | currently inline in `binds.lua`; optionally move into scripts | [~] 4 binds work inline |
 
-> Current `~/.local/bin`: `wall`, `gsr-status`, `gsr-toggle`, plus unrelated `airctl`, `android`, `seed4`, `directionallylocal`. `theme-apply`, `rice-doctor`, `rice-restart`, `power-menu`, `keybinds` do not exist.
+> Current `~/.local/bin`: `wall`, `theme-apply`, `rice-brightness`, `rice-nightlight`, `rice-clipboard`, `rice-doctor`, `rice-restart`, `gsr-status`, `gsr-toggle`, plus unrelated `airctl`, `android`, `seed4`, `directionallylocal`. `power-menu` and `keybinds` do not exist (wlogout covers the power menu).
 
 ### `theme-apply` (the single "recolor everything" command)
 ```bash
@@ -427,7 +427,7 @@ fi
 ```
 In `wall`, change `set_wall` to: `hyprctl hyprpaper wallpaper ",$1,$FIT"; theme-apply "$1"`.
 
-> Current `wall` calls `wallust run "$1"` directly and does not run hooks. Also fix the name collision first: `command -v wall` is `/usr/bin/wall`, because `~/.local/bin` is last in `PATH`. Rename the script to `rice-wall` (and update keybinds) or move `~/.local/bin` before `/usr/bin`.
+> Implemented: `wall` calls `$HOME/.local/bin/theme-apply` (absolute, because Hyprland's PATH does not include `~/.local/bin`). `~/.bashrc` puts `~/.local/bin` first for interactive shells.
 
 ### `rice-doctor` (health check)
 ```bash
