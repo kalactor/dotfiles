@@ -12,10 +12,28 @@ if ! wallust run "$img" >/dev/null 2>&1; then
   exit 1
 fi
 
+# 1b. SDDM is system-level. If the theme directory is user-writable (installed
+# with the chown from system/sddm/README.md), keep its wallpaper and palette in
+# sync automatically; otherwise leave it untouched.
+sddm_theme="/usr/share/sddm/themes/rice"
+if [ -w "$sddm_theme" ] && [ -f "$HOME/.cache/rice/Colors.qml" ]; then
+  cp -f "$HOME/.cache/rice/Colors.qml" "$sddm_theme/Colors.qml"
+  cp -f "$img" "$sddm_theme/background.jpg"
+fi
+
+# 1c. GTK 3/4 cannot reload gtk.css in place. Restart the common, stateless
+# settings apps so they pick up the new palette; other GTK apps do so when
+# reopened. Set RICE_GTK_RESTART=0 to skip this.
+if [ "${RICE_GTK_RESTART:-1}" != "0" ] && [ -x "$HOME/.local/bin/rice-gtk-reload" ]; then
+  "$HOME/.local/bin/rice-gtk-reload" >/dev/null 2>&1 || true
+fi
+
 # 2. Reload apps that do not watch their own config
 hyprctl reload >/dev/null 2>&1 || true          # Hyprland border colors
 pkill -SIGUSR1 kitty 2>/dev/null || true        # kitty reloads its config
 swaync-client -rs >/dev/null 2>&1 || true       # SwayNC reloads CSS
+pkill -USR2 -x btop 2>/dev/null || true         # btop re-reads config + active theme
+[ -f "$HOME/.config/cava/config" ] && touch "$HOME/.config/cava/config"  # cava live-config reload
 # Waybar reloads colors.css on its own (reload_style_on_change)
 
 # 3. User hooks: every executable in the folder gets the image path as $1

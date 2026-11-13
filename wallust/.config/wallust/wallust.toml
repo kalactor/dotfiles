@@ -41,3 +41,7 @@ btop.target = '~/.config/btop/themes/wallust.theme'
 
 cava.template = 'cava-colors'
 cava.target = '~/.config/cava/themes/wallust'
+
+# SDDM greeter (copied into the system theme by theme-apply when writable)
+sddm.template = 'sddm-colors.qml'
+sddm.target = '~/.cache/rice/Colors.qml'

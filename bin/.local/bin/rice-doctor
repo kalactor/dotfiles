@@ -11,7 +11,7 @@ for c in hyprctl waybar swaync swaync-client rofi wlogout wallust hyprpaper \
          hyprlock hypridle sddm kitty vim grim slurp satty wl-copy cliphist \
          gpu-screen-recorder swayimg jq notify-send powerprofilesctl pamixer \
          gnome-keyring-daemon hyprsunset swayosd-server ddcutil hyprpicker \
-         qt6ct kvantummanager btop cava; do
+         qt6ct kvantummanager btop cava rice-gtk-reload; do
     command -v "$c" >/dev/null 2>&1 && ok "$c" || bad "$c missing"
 done
 
@@ -54,6 +54,7 @@ for f in "$HOME/.config/waybar/colors.css" \
          "$HOME/.config/starship.toml" \
          "$HOME/.config/btop/themes/wallust.theme" \
          "$HOME/.config/cava/themes/wallust" \
+         "$HOME/.cache/rice/Colors.qml" \
          "$HOME/.config/wlogout/colors.css"; do
     [ -s "$f" ] && ok "${f#$HOME/}" || bad "${f#$HOME/} missing"
 done

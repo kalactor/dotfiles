@@ -60,9 +60,28 @@ stow hypr waybar kitty swaync rofi wallust swayimg wlogout vim bash bin gtk rice
 | starship | `~/.config/starship.toml` |
 | btop | `~/.config/btop/themes/wallust.theme` |
 | cava | `~/.config/cava/themes/wallust` |
+| SDDM | `~/.cache/rice/Colors.qml` → installed theme |
 
-btop reads its theme at startup; cava picks it up on start, or press `c` in a
-running cava to reload colors.
+btop reloads live on `SIGUSR2`; cava reloads when its config is touched; an
+open vim reloads its colorscheme within two seconds. `theme-apply` sends all
+three signals/updates for you. GTK apps cannot reload `gtk.css` in place, so
+`theme-apply` restarts the common settings apps (`pavucontrol`,
+`nm-connection-editor`, `blueman-manager`, `nwg-look`) automatically; set
+`RICE_GTK_RESTART=0` to disable that.
+
+### What reloads automatically
+
+| App | Behaviour |
+|---|---|
+| Hyprland, Waybar, SwayNC, kitty | live reload |
+| btop | live reload via `SIGUSR2` |
+| cava | live reload via `live-config` |
+| vim | live reload within 2 s (timer + focus) |
+| starship | next prompt |
+| rofi, wlogout, hyprlock | next time they open |
+| SDDM | next greeter start (after install) |
+| GTK apps | common settings apps restart automatically; other GTK apps on next open |
+| Chrome | not themed; UI follows dark mode only |
 
 Wallpaper binds:
 
@@ -102,13 +121,15 @@ Waybar runs **only on `DP-3`**. Workspaces 1–5 live there; 6–10 on `HDMI-A-1
 ```bash
 rice-doctor     # commands, services, generated files, Waybar outputs
 rice-restart    # restart waybar + swaync + hyprpaper
+rice-gtk-reload # restart running GTK settings apps after a palette change
 ```
 
 ## SDDM
 
 The custom greeter theme is in `system/sddm/themes/rice/`. It needs `sudo` to
 install; see **`system/sddm/README.md`** for install, preview, rollback and
-wallpaper-update commands.
+wallpaper-update commands. Once installed with the documented `chown`, SDDM
+follows `wall` automatically.
 
 ## Recovery
 

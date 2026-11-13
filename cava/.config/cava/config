@@ -6,7 +6,7 @@
 [general]
 
 # Auto reload config if the configuration file has changed. 1 = on, 0 = off.
-; live-config = 0
+live-config = 1
 
 # Accepts only non-negative values.
 ; framerate = 60

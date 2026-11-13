@@ -29,3 +29,58 @@
 @define-color insensitive_bg_color {{ color0 }};
 @define-color insensitive_fg_color {{ color8 }};
 @define-color borders {{ color8 }};
+
+/* Adwaita uses literal colours, so named colours alone are not enough.
+   These rules recolour the common surfaces in both GTK 3 and GTK 4 apps. */
+window, .background, window > box, .view, scrolledwindow, viewport, list, treeview {
+    background-color: {{ background }};
+    color: {{ foreground }};
+}
+
+headerbar, .titlebar, .header-bar, .top-bar {
+    background-color: {{ color0 }};
+    color: {{ foreground }};
+    border-color: {{ color8 }};
+}
+
+button, .button {
+    background-color: {{ color0 }};
+    color: {{ foreground }};
+    border-color: {{ color8 }};
+}
+button:hover, .button:hover { background-color: {{ color8 }}; }
+button:active, .button:active, button:checked { background-color: {{ color3 }}; color: {{ background }}; }
+
+entry, spinbutton, searchentry, textview > text {
+    background-color: {{ color0 }};
+    color: {{ foreground }};
+    border-color: {{ color8 }};
+}
+
+menu, menuitem, popover, .menu, .context-menu {
+    background-color: {{ color0 }};
+    color: {{ foreground }};
+}
+menuitem:hover, menu menuitem:hover { background-color: {{ color3 }}; color: {{ background }}; }
+
+*:selected, selection, .view:selected, treeview:selected {
+    background-color: {{ color3 }};
+    color: {{ background }};
+}
+
+tooltip, tooltip.background {
+    background-color: {{ color0 }};
+    color: {{ foreground }};
+    border-color: {{ color8 }};
+}
+
+notebook, notebook > header, tab { background-color: {{ background }}; color: {{ foreground }}; }
+notebook > header > tabs > tab:checked { background-color: {{ color0 }}; color: {{ foreground }}; }
+.sidebar, .navigation-sidebar { background-color: {{ background }}; color: {{ foreground }}; }
+
+scrollbar slider { background-color: {{ color8 }}; }
+scrollbar slider:hover { background-color: {{ color3 }}; }
+link, *:link { color: {{ color4 }}; }
+progressbar progress, levelbar block.filled { background-color: {{ color3 }}; }
+switch:checked { background-color: {{ color3 }}; }
+scale highlight { background-color: {{ color3 }}; }

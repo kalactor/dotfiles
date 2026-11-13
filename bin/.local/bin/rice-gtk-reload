@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# rice-gtk-reload — restart running GTK utilities so they load the new palette.
+#
+# GTK 3/4 do not reload ~/.config/gtk-*/gtk.css in a running process, and
+# Hyprland has no settings daemon that would make them do so. Restarting the
+# common, stateless settings apps is safe; everything else picks up the new
+# colours the next time it is opened.
+set -uo pipefail
+
+[ "${RICE_GTK_RESTART:-1}" = "0" ] && exit 0
+
+clients=$(hyprctl clients -j 2>/dev/null) || exit 0
+
+restart_one() {
+    local class="$1" cmd="$2" comm="$3"
+    local ws
+    ws=$(jq -r --arg c "$class" '.[] | select(.class == $c) | .workspace.id' <<<"$clients" | head -n1)
+    [ -n "$ws" ] || return 0
+
+    pkill -x "$comm" 2>/dev/null || return 0
+    for _ in $(seq 1 20); do
+        pgrep -x "$comm" >/dev/null 2>&1 || break
+        sleep 0.1
+    done
+    hyprctl dispatch "hl.dsp.exec_cmd(\"[workspace $ws] $cmd\")" >/dev/null 2>&1 || true
+}
+
+# class / command / process name (comm, truncated to 15 chars by Linux)
+restart_one "org.pulseaudio.pavucontrol" "pavucontrol"          "pavucontrol"
+restart_one "nm-connection-editor"      "nm-connection-editor" "nm-connection-e"
+restart_one "blueman-manager"           "blueman-manager"      "blueman-manager"
+restart_one "nwg-look"                  "nwg-look"             "nwg-look"

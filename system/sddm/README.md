@@ -18,9 +18,14 @@ username/password/session, Login/Reboot/Shutdown).
 sudo mkdir -p /usr/share/sddm/themes /etc/sddm.conf.d
 sudo cp -r ~/dotfiles/system/sddm/themes/rice /usr/share/sddm/themes/
 sudo cp ~/dotfiles/system/etc/sddm.conf.d/10-theme.conf /etc/sddm.conf.d/
-sudo chown -R root:root /usr/share/sddm/themes/rice
-sudo chmod -R a+rX /usr/share/sddm/themes/rice
+sudo chown -R "$USER:$USER" /usr/share/sddm/themes/rice
+sudo chmod -R u+rwX,go+rX /usr/share/sddm/themes/rice
 ```
+
+The theme directory is deliberately owned by your user so `wall`/`theme-apply`
+can keep its wallpaper and `Colors.qml` in sync without sudo. On a single-user
+home PC that is a reasonable trade-off; if you prefer root ownership, use
+`root:root` and re-run the manual update steps below instead.
 
 Preview the installed copy without logging out:
 
@@ -50,22 +55,21 @@ place; removing `/usr/share/sddm/themes/rice` is optional.
 
 ## Changing wallpaper / palette later
 
-SDDM is system-level, so it does **not** follow `wall`/`theme-apply`
-automatically (that would need root on every wallpaper change).
+After the install above, `wall`/`theme-apply` updates SDDM automatically:
+it copies the new wallpaper to `background.jpg` and writes the generated
+`Colors.qml` palette into the theme directory. The greeter reads both on its
+next start, so the login screen matches the desktop with no sudo.
 
-To update it by hand:
+This works because the theme directory is owned by your user. If you switch it
+back to `root:root`, either restore the `chown` above or update it by hand:
 
 ```bash
-# 1. new background
-sudo cp ~/Pictures/walls/<new-wallpaper>.jpg /usr/share/sddm/themes/rice/background.jpg
-
-# 2. palette: edit the seven color properties at the top of Main.qml
-#    (bg, fg, accent, accentAlt, muted, fieldBg, danger), then copy it
-sudo cp ~/dotfiles/system/sddm/themes/rice/Main.qml /usr/share/sddm/themes/rice/Main.qml
+sudo cp "$(readlink -f ~/.cache/rice/wallpaper)" /usr/share/sddm/themes/rice/background.jpg
+sudo cp ~/.cache/rice/Colors.qml /usr/share/sddm/themes/rice/Colors.qml
 ```
 
-Current theme palette (2026-11-13, teal wallpaper): `#232829`, `#D3E4E5`,
-`#117C62`, `#127E86`, `#809292`, `#484E4F`, `#E06C75`.
+Current default palette (2026-11-13, gothic wallpaper): `#0F1112`, `#FCF5E7`,
+`#BD7E50`, `#BA97B1`, `#A9A295`, `#38393B`, `#E06C75`.
 
 ## Why the greeter stays X11
 
