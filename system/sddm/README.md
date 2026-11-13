@@ -64,8 +64,8 @@ sudo cp ~/Pictures/walls/<new-wallpaper>.jpg /usr/share/sddm/themes/rice/backgro
 sudo cp ~/dotfiles/system/sddm/themes/rice/Main.qml /usr/share/sddm/themes/rice/Main.qml
 ```
 
-Current theme palette (2026-11-13): `#0F1112`, `#FCF5E7`, `#BD7E50`,
-`#C0DBFF`, `#A9A295`, `#38393B`, `#E06C75`.
+Current theme palette (2026-11-13, teal wallpaper): `#232829`, `#D3E4E5`,
+`#117C62`, `#127E86`, `#809292`, `#484E4F`, `#E06C75`.
 
 ## Why the greeter stays X11
 

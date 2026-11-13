@@ -9,12 +9,12 @@ Rectangle {
     property int sessionIndex: session.index
 
     // Palette (matches the wallust output used on 2026-11-13)
-    readonly property color bg:        "#0F1112"
-    readonly property color fg:        "#FCF5E7"
-    readonly property color accent:    "#BD7E50"
-    readonly property color accentAlt: "#C0DBFF"
-    readonly property color muted:     "#A9A295"
-    readonly property color fieldBg:   "#38393B"
+    readonly property color bg:        "#232829"
+    readonly property color fg:        "#D3E4E5"
+    readonly property color accent:    "#117C62"
+    readonly property color accentAlt: "#127E86"
+    readonly property color muted:     "#809292"
+    readonly property color fieldBg:   "#484E4F"
     readonly property color danger:    "#E06C75"
 
     TextConstants { id: textConstants }
@@ -92,9 +92,9 @@ Rectangle {
         width: 400
         height: content.implicitHeight + 64
         radius: 24
-        color: Qt.rgba(15 / 255, 17 / 255, 18 / 255, 0.90)
+        color: Qt.rgba(root.bg.r, root.bg.g, root.bg.b, 0.90)
         border.width: 1
-        border.color: Qt.rgba(189 / 255, 126 / 255, 80 / 255, 0.85)
+        border.color: root.accent
 
         Column {
             id: content

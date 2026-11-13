@@ -51,6 +51,7 @@ for f in "$HOME/.config/waybar/colors.css" \
          "$HOME/.config/gtk-3.0/gtk.css" \
          "$HOME/.config/gtk-4.0/gtk.css" \
          "$HOME/.vim/colors/wallust.vim" \
+         "$HOME/.config/starship.toml" \
          "$HOME/.config/wlogout/colors.css"; do
     [ -s "$f" ] && ok "${f#$HOME/}" || bad "${f#$HOME/} missing"
 done
@@ -68,3 +69,12 @@ for p in hypr waybar kitty swaync rofi wallust swayimg wlogout rice; do
     [ -L "$HOME/.config/$p" ] && ok "~/.config/$p -> $(readlink "$HOME/.config/$p")" || bad "~/.config/$p is not a symlink"
 done
 [ -L "$HOME/.vimrc" ] && ok "~/.vimrc -> $(readlink "$HOME/.vimrc")" || bad "~/.vimrc is not a symlink"
+[ -L "$HOME/.config/mpv/mpv.conf" ] && ok "~/.config/mpv/mpv.conf -> $(readlink "$HOME/.config/mpv/mpv.conf")" || bad "~/.config/mpv/mpv.conf is not a symlink"
+[ -L "$HOME/.config/chrome-flags.conf" ] && ok "~/.config/chrome-flags.conf -> $(readlink "$HOME/.config/chrome-flags.conf")" || bad "~/.config/chrome-flags.conf is not a symlink"
+
+echo "Wallpaper state:"
+if [ -L "$HOME/.cache/rice/wallpaper" ] && [ -f "$HOME/.cache/rice/wallpaper" ]; then
+    ok "persisted -> $(readlink "$HOME/.cache/rice/wallpaper")"
+else
+    bad "~/.cache/rice/wallpaper missing"
+fi

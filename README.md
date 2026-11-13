@@ -19,6 +19,8 @@ wall set ~/Pictures/walls/<image>.jpg
 | `rofi/.config/rofi/` | launcher (imports generated `colors.rasi`) |
 | `wlogout/.config/wlogout/` | power menu (imports generated `colors.css`) |
 | `kitty/.config/kitty/` | terminal (includes generated `colors.conf`) |
+| `mpv/.config/mpv/` | mpv playback config |
+| `chrome/.config/chrome-flags.conf` | Chrome Wayland/keyring flags |
 | `vim/.vimrc` | vim + vim-plug + coc.nvim (generated colorscheme) |
 | `wallust/.config/wallust/` | color engine config + templates |
 | `bin/.local/bin/` | `wall`, `theme-apply`, `rice-*` helpers |
@@ -33,7 +35,7 @@ Generated files (`colors.css`, `colors.rasi`, `colors.lua`, `colors.conf`,
 
 ```bash
 cd ~/dotfiles
-stow hypr waybar kitty swaync rofi wallust swayimg wlogout vim bash bin gtk rice
+stow hypr waybar kitty swaync rofi wallust swayimg wlogout vim bash bin gtk rice mpv chrome
 ```
 
 `system/` is deliberately not stowed; see `system/README.md`.
@@ -53,6 +55,7 @@ stow hypr waybar kitty swaync rofi wallust swayimg wlogout vim bash bin gtk rice
 | GTK 3/4 | `~/.config/gtk-{3,4}.0/gtk.css` |
 | vim | `~/.vim/colors/wallust.vim` |
 | wlogout | `~/.config/wlogout/colors.css` |
+| starship | `~/.config/starship.toml` |
 
 Wallpaper binds:
 
@@ -62,6 +65,9 @@ Wallpaper binds:
 | `Super+Shift+F6` | previous wallpaper |
 | `Super+F7` | random wallpaper |
 | `Super+F8` | pick with thumbnails |
+
+The chosen wallpaper is also symlinked to `~/.cache/rice/wallpaper`; hyprpaper
+loads that path at login, so the selection survives a reboot.
 
 Add a hook by dropping an executable in `~/.config/rice/hooks/theme-set.d/`.
 It receives the image path as `$1`.

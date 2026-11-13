@@ -4,6 +4,7 @@ colors.rasi
 colors.lua
 colors.conf
 hyprlock-colors.conf
+gtk.css
 colors/
 
 # Caches and local state

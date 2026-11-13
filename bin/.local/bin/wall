@@ -9,11 +9,14 @@ n=${#files[@]}
 [ "$n" -eq 0 ] && { notify-send "wall" "No wallpapers in $DIR"; exit 1; }
 
 set_wall() {
+	mkdir -p "$HOME/.cache/rice"
+	ln -sf "$1" "$HOME/.cache/rice/wallpaper"
 	hyprctl hyprpaper wallpaper ",$1,$FIT";
 	"$HOME/.local/bin/theme-apply" "$1"
 }
 
-cur=$(hyprctl hyprpaper listactive | head -n1 | sed 's/^[^:]*: *//')
+cur=$(hyprctl hyprpaper listactive | sed -n 's/^DP-3: *//p' | head -n1)
+[ -z "$cur" ] && cur=$(hyprctl hyprpaper listactive | head -n1 | sed 's/^[^:]*: *//')
 idx=-1
 for i in "${!files[@]}"; do [ "${files[$i]}" = "$cur" ] && idx=$i && break; done
 
