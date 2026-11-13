@@ -34,6 +34,17 @@ if [ -f "$HOME/.vim/colors/wallust.vim" ]; then
   sed -i "s/^set background=.*/set background=$mode/" "$HOME/.vim/colors/wallust.vim"
 fi
 
+# hyprlock dims the current wallpaper before drawing text. A light palette
+# needs almost no dimming, while a dark palette needs a stronger scrim.
+hl_colors="$HOME/.config/hypr/hyprlock-colors.conf"
+if [ -f "$hl_colors" ]; then
+  if [ "$mode" = "light" ]; then scrim=0.90; clock_var=muted; else scrim=0.55; clock_var=foreground; fi
+  sed -i '/^\$scrim[[:space:]]*=/d; /^\$clock[[:space:]]*=/d' "$hl_colors"
+  printf '$scrim = %s\n' "$scrim" >> "$hl_colors"
+  clock_hex=$(awk -F'[()]' -v var="$clock_var" '$1 ~ ("\\$" var) {print $2; exit}' "$hl_colors")
+  [ -n "$clock_hex" ] && printf '$clock = rgba(%s)\n' "$clock_hex" >> "$hl_colors"
+fi
+
 # 2. GTK 3/4 follow gsettings on Wayland (settings.ini is ignored there).
 if command -v gsettings >/dev/null 2>&1; then
   if [ "$mode" = "light" ]; then

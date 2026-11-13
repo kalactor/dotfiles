@@ -3,7 +3,7 @@ colors.css
 colors.rasi
 colors.lua
 colors.conf
-hyprlock-colors.conf
+/hypr/.config/hypr/hyprlock-colors.conf
 gtk.css
 /btop/.config/btop/themes/wallust.theme
 /cava/.config/cava/themes/wallust

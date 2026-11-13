@@ -23,7 +23,12 @@ eval "$(fnm env --use-on-cd --shell bash)"
 
 [[ "$TERM_PROGRAM" == "kiro" ]] && . "$(kiro --locate-shell-integration-path bash)"
 
-fastfetch -c ~/.config/fastfetch/terminal-startup-config.jsonc
+# Minimal system summary once per kitty window (not in nested shells)
+if [[ -n "$KITTY_WINDOW_ID" && "$RICE_FASTFETCH_SHOWN" != "$KITTY_WINDOW_ID" ]] \
+   && command -v fastfetch >/dev/null 2>&1; then
+  export RICE_FASTFETCH_SHOWN="$KITTY_WINDOW_ID"
+  fastfetch -c ~/.config/fastfetch/terminal-startup-config.jsonc
+fi
 
 # User scripts first, so ~/.local/bin/wall wins over /usr/bin/wall
 export PATH="$HOME/.local/bin:$PATH"

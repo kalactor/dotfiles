@@ -26,6 +26,7 @@ rice-mode status
 | `mpv/.config/mpv/` | mpv playback config |
 | `chrome/.config/chrome-flags.conf` | Chrome Wayland/keyring flags |
 | `vim/.vimrc` | vim + vim-plug + coc.nvim (generated colorscheme) |
+| `fastfetch/.config/fastfetch/` | minimal kitty startup summary |
 | `wallust/.config/wallust/` | color engine config + templates |
 | `bin/.local/bin/` | `wall`, `theme-apply`, `rice-mode`, `rice-*` helpers |
 | `gtk/.config/gtk-{3,4}.0/` | GTK settings + generated `gtk.css` |
@@ -40,7 +41,7 @@ Generated files (`colors.css`, `colors.rasi`, `colors.lua`, `colors.conf`,
 
 ```bash
 cd ~/dotfiles
-stow hypr waybar kitty swaync rofi wallust swayimg wlogout vim bash bin gtk rice mpv chrome btop cava
+stow hypr waybar kitty swaync rofi wallust swayimg wlogout vim bash bin gtk rice mpv chrome btop cava fastfetch
 mkdir -p ~/.config/systemd/user
 stow --no-folding systemd
 systemctl --user daemon-reload
@@ -48,6 +49,9 @@ systemctl --user enable --now rice-sun.timer
 ```
 
 `system/` is deliberately not stowed; see `system/README.md`.
+
+A minimal fastfetch summary is printed once per kitty window (the `.bashrc`
+guard uses `KITTY_WINDOW_ID`, so nested shells stay quiet).
 
 ## Theme engine
 
@@ -99,6 +103,10 @@ are switched through `gsettings`; Qt uses `qt6ct` + Kvantum (`KvArc` for light,
 | GTK apps | gsettings theme/icon switch; common settings apps restart automatically, others on next open |
 | Qt apps | next open (qt6ct + Kvantum) |
 | Chrome | not themed by wallust; Chrome's own UI theme is separate |
+
+hyprlock uses the current light/dark wallpaper as a blurred background and
+adjusts its scrim and clock colour per mode, so the lock screen stays readable
+in both palettes.
 
 Wallpaper binds (always inside the current light/dark mode):
 
