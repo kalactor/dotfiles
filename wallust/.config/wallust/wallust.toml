@@ -34,3 +34,10 @@ vim.target = '~/.vim/colors/wallust.vim'
 
 wlogout.template = 'wlogout-colors.css'
 wlogout.target = '~/.config/wlogout/colors.css'
+
+# TUI monitors
+btop.template = 'btop-colors.theme'
+btop.target = '~/.config/btop/themes/wallust.theme'
+
+cava.template = 'cava-colors'
+cava.target = '~/.config/cava/themes/wallust'

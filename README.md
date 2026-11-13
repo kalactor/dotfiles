@@ -19,6 +19,8 @@ wall set ~/Pictures/walls/<image>.jpg
 | `rofi/.config/rofi/` | launcher (imports generated `colors.rasi`) |
 | `wlogout/.config/wlogout/` | power menu (imports generated `colors.css`) |
 | `kitty/.config/kitty/` | terminal (includes generated `colors.conf`) |
+| `btop/.config/btop/` | resource monitor (generated `themes/wallust.theme`) |
+| `cava/.config/cava/` | audio visualizer (generated `themes/wallust`) |
 | `mpv/.config/mpv/` | mpv playback config |
 | `chrome/.config/chrome-flags.conf` | Chrome Wayland/keyring flags |
 | `vim/.vimrc` | vim + vim-plug + coc.nvim (generated colorscheme) |
@@ -29,13 +31,13 @@ wall set ~/Pictures/walls/<image>.jpg
 | `system/` | **copies only** — system config, SDDM theme, package lists |
 
 Generated files (`colors.css`, `colors.rasi`, `colors.lua`, `colors.conf`,
-`hyprlock-colors.conf`, `gtk.css`, `wallust.vim`) are gitignored.
+`hyprlock-colors.conf`, `gtk.css`, `wallust.vim`, btop/cava themes) are gitignored.
 
 ## Install / re-stow
 
 ```bash
 cd ~/dotfiles
-stow hypr waybar kitty swaync rofi wallust swayimg wlogout vim bash bin gtk rice mpv chrome
+stow hypr waybar kitty swaync rofi wallust swayimg wlogout vim bash bin gtk rice mpv chrome btop cava
 ```
 
 `system/` is deliberately not stowed; see `system/README.md`.
@@ -56,6 +58,11 @@ stow hypr waybar kitty swaync rofi wallust swayimg wlogout vim bash bin gtk rice
 | vim | `~/.vim/colors/wallust.vim` |
 | wlogout | `~/.config/wlogout/colors.css` |
 | starship | `~/.config/starship.toml` |
+| btop | `~/.config/btop/themes/wallust.theme` |
+| cava | `~/.config/cava/themes/wallust` |
+
+btop reads its theme at startup; cava picks it up on start, or press `c` in a
+running cava to reload colors.
 
 Wallpaper binds:
 

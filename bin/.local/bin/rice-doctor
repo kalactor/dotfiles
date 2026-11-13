@@ -11,7 +11,7 @@ for c in hyprctl waybar swaync swaync-client rofi wlogout wallust hyprpaper \
          hyprlock hypridle sddm kitty vim grim slurp satty wl-copy cliphist \
          gpu-screen-recorder swayimg jq notify-send powerprofilesctl pamixer \
          gnome-keyring-daemon hyprsunset swayosd-server ddcutil hyprpicker \
-         qt6ct kvantummanager; do
+         qt6ct kvantummanager btop cava; do
     command -v "$c" >/dev/null 2>&1 && ok "$c" || bad "$c missing"
 done
 
@@ -52,6 +52,8 @@ for f in "$HOME/.config/waybar/colors.css" \
          "$HOME/.config/gtk-4.0/gtk.css" \
          "$HOME/.vim/colors/wallust.vim" \
          "$HOME/.config/starship.toml" \
+         "$HOME/.config/btop/themes/wallust.theme" \
+         "$HOME/.config/cava/themes/wallust" \
          "$HOME/.config/wlogout/colors.css"; do
     [ -s "$f" ] && ok "${f#$HOME/}" || bad "${f#$HOME/} missing"
 done
@@ -65,7 +67,7 @@ else
 fi
 
 echo "Symlinks:"
-for p in hypr waybar kitty swaync rofi wallust swayimg wlogout rice; do
+for p in hypr waybar kitty swaync rofi wallust swayimg wlogout rice btop cava; do
     [ -L "$HOME/.config/$p" ] && ok "~/.config/$p -> $(readlink "$HOME/.config/$p")" || bad "~/.config/$p is not a symlink"
 done
 [ -L "$HOME/.vimrc" ] && ok "~/.vimrc -> $(readlink "$HOME/.vimrc")" || bad "~/.vimrc is not a symlink"
