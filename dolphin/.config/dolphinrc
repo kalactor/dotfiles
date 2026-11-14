@@ -1,0 +1,52 @@
+[CompactMode]
+PreviewSize=16
+
+[DetailsMode]
+ExpandableFolders=false
+IconSize=32
+LeftPadding=8
+PreviewSize=32
+RightPadding=8
+UseSystemFont=true
+
+[General]
+EditableUrl=true
+FilterBar=false
+GlobalViewProps=true
+RememberOpenedTabs=false
+ShowFullPath=true
+ShowSelectionToggle=false
+ShowStatusBar=Disabled
+ShowToolTips=false
+Version=202
+
+[IconsMode]
+CompactSpacing=true
+IconSize=48
+MaximumTextLines=1
+PreviewSize=48
+
+[InformationPanel]
+dateFormat=ShortFormat
+previewsShown=false
+
+[KFileDialog Settings]
+Places Icons Auto-resize=false
+Places Icons Static Size=16
+
+[MainWindow]
+MenuBar=Disabled
+
+[MainWindow][Toolbar mainToolBar]
+IconSize=16
+ToolButtonStyle=IconOnly
+
+[PlacesPanel]
+IconSize=16
+
+[PreviewSettings]
+Plugins=glycin-image-rs,appimagethumbnail,audiothumbnail,glycin-heif,blenderthumbnail,comicbookthumbnail,cursorthumbnail,djvuthumbnail,ebookthumbnail,exrthumbnail,directorythumbnail,imagethumbnail,jpegthumbnail,glycin-jxl,kraorathumbnail,windowsexethumbnail,windowsimagethumbnail,mobithumbnail,opendocumentthumbnail,gsthumbnail,rawthumbnail,glycin-svg,svgthumbnail,ffmpegthumbs
+
+[Toolbar mainToolBar]
+IconSize=16
+ToolButtonStyle=IconOnly

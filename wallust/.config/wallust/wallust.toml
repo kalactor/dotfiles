@@ -45,3 +45,8 @@ cava.target = '~/.config/cava/themes/wallust'
 # SDDM greeter (copied into the system theme by theme-apply when writable)
 sddm.template = 'sddm-colors.qml'
 sddm.target = '~/.cache/rice/Colors.qml'
+
+# Machine-readable palette for helpers that generate multi-colour files
+# (KDE colour scheme, Kvantum SVG, Dolphin view defaults).
+palette.template = 'palette.env'
+palette.target = '~/.cache/rice/colors.env'

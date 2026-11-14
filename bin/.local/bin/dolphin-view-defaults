@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+"""Seed Dolphin's global view defaults once.
+
+Dolphin stores global view properties in the `user.kde.fm.viewproperties#1`
+xattr of ~/.local/share/dolphin/view_properties/global (falling back to a
+`.directory` file when xattrs are unavailable). A fresh profile defaults to
+Icons view; the rice wants a compact Details view.
+
+This script never overwrites a view mode the user has already chosen.
+"""
+
+from __future__ import annotations
+
+import datetime
+import os
+import sys
+from pathlib import Path
+
+BASE = Path.home() / ".local/share/dolphin/view_properties/global"
+XATTR = "user.kde.fm.viewproperties#1"
+DOT_DIR = BASE / ".directory"
+
+
+def properties() -> str:
+    now = datetime.datetime.now()
+    timestamp = (
+        f"{now.year},{now.month},{now.day},"
+        f"{now.hour},{now.minute},{now.second}.{now.microsecond // 10000:02d}"
+    )
+    return (
+        "[Dolphin]\n"
+        "PreviewsShown=false\n"
+        "SortFoldersFirst=true\n"
+        "SortOrder=0\n"
+        "SortRole=text\n"
+        f"Timestamp={timestamp}\n"
+        "Version=4\n"
+        "ViewMode=1\n"
+        "VisibleRoles=text,size,modificationtime\n"
+    )
+
+
+def has_view_mode(value: str) -> bool:
+    return any(line.strip().startswith("ViewMode=") for line in value.splitlines())
+
+
+def main() -> int:
+    BASE.mkdir(parents=True, exist_ok=True)
+    text = properties()
+
+    try:
+        current = os.getxattr(BASE, XATTR).decode("utf-8", errors="replace")
+    except OSError:
+        current = ""
+
+    if has_view_mode(current):
+        return 0
+
+    try:
+        os.setxattr(BASE, XATTR, text.encode())
+    except OSError:
+        # Filesystem without xattr support: keep the plain-file fallback.
+        if DOT_DIR.exists():
+            try:
+                existing = DOT_DIR.read_text(errors="replace")
+            except OSError:
+                existing = ""
+            if has_view_mode(existing):
+                return 0
+        DOT_DIR.write_text(text)
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

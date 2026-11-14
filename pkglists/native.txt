@@ -20,6 +20,7 @@ edk2-ovmf
 efibootmgr
 eza
 fastfetch
+ffmpeg
 ffmpegthumbs
 firefox
 fish
@@ -80,6 +81,7 @@ pipewire-jack
 pipewire-pulse
 playerctl
 power-profiles-daemon
+python-cryptography
 qemu-full
 qt5-wayland
 qt6ct

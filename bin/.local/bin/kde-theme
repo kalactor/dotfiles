@@ -1,0 +1,469 @@
+#!/usr/bin/env python3
+"""Generate the KDE colour scheme and a wallpaper-driven Kvantum theme.
+
+Reads ~/.cache/rice/colors.env (written by wallust) and builds:
+  ~/.config/kdeglobals
+  ~/.config/Kvantum/WallustFlat/{WallustFlat.kvconfig,WallustFlat.svg}
+  ~/.config/Kvantum/kvantum.kvconfig
+
+Usage: kde-theme [light|dark]
+"""
+
+from __future__ import annotations
+
+import colorsys
+import re
+import sys
+from pathlib import Path
+
+HOME = Path.home()
+CACHE = HOME / ".cache" / "rice"
+
+
+def hex_to_rgb(color: str) -> tuple[int, int, int]:
+    color = color.strip().lstrip("#")
+    if len(color) == 3:
+        color = "".join(ch * 2 for ch in color)
+    return tuple(int(color[i : i + 2], 16) for i in (0, 2, 4))
+
+
+def rgb_to_hex(rgb: tuple[float, float, float]) -> str:
+    return "#%02X%02X%02X" % tuple(max(0, min(255, round(v))) for v in rgb)
+
+
+def mix(a: str, b: str, t: float) -> str:
+    ra, rb = hex_to_rgb(a), hex_to_rgb(b)
+    return rgb_to_hex(tuple(ra[i] * (1 - t) + rb[i] * t for i in range(3)))
+
+
+def rel_lum(color: str) -> float:
+    rgb = [x / 255 for x in hex_to_rgb(color)]
+    rgb = [x / 12.92 if x <= 0.04045 else ((x + 0.055) / 1.055) ** 2.4 for x in rgb]
+    return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]
+
+
+def contrast(a: str, b: str) -> float:
+    la, lb = rel_lum(a), rel_lum(b)
+    if la < lb:
+        la, lb = lb, la
+    return (la + 0.05) / (lb + 0.05)
+
+
+def contrast_text(bg: str, palette: dict[str, str]) -> str:
+    fg = palette["foreground"]
+    back = palette["background"]
+    return fg if contrast(bg, fg) >= contrast(bg, back) else back
+
+
+def adjust_lightness(color: str, factor: float) -> str:
+    r, g, b = (x / 255 for x in hex_to_rgb(color))
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+    l = max(0.03, min(0.97, l * factor))
+    r, g, b = colorsys.hls_to_rgb(h, l, s)
+    return rgb_to_hex((r * 255, g * 255, b * 255))
+
+
+def lerp_anchor(lum: float, anchors: list[tuple[float, str]]) -> str:
+    if lum <= anchors[0][0]:
+        return anchors[0][1]
+    if lum >= anchors[-1][0]:
+        return anchors[-1][1]
+    for (l0, c0), (l1, c1) in zip(anchors, anchors[1:]):
+        if l0 <= lum <= l1:
+            t = (lum - l0) / (l1 - l0) if l1 > l0 else 0.0
+            return mix(c0, c1, t)
+    return anchors[-1][1]
+
+
+def read_palette() -> dict[str, str]:
+    path = CACHE / "colors.env"
+    palette: dict[str, str] = {}
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        palette[key.strip()] = value.strip()
+    required = ("background", "foreground", "color0", "color1", "color2",
+                "color3", "color4", "color5", "color8")
+    missing = [k for k in required if k not in palette]
+    if missing:
+        raise SystemExit(f"kde-theme: missing palette keys: {', '.join(missing)}")
+    return palette
+
+
+def base_accent(svg: str) -> str:
+    counts: dict[str, int] = {}
+    for match in re.finditer(r"#([0-9a-fA-F]{6})", svg):
+        color = "#" + match.group(1).lower()
+        counts[color] = counts.get(color, 0) + 1
+    best: tuple[int, str] | None = None
+    for color, count in counts.items():
+        r, g, b = (x / 255 for x in hex_to_rgb(color))
+        h, s, v = colorsys.rgb_to_hsv(r, g, b)
+        if 180 <= h * 360 <= 235 and s > 0.4 and v > 0.5:
+            if best is None or count > best[0]:
+                best = (count, color)
+    return best[1] if best else "#3daee9"
+
+
+def map_color(color: str, palette: dict[str, str], accent: str, mode: str) -> str:
+    r, g, b = (x / 255 for x in hex_to_rgb(color))
+    h, s, v = colorsys.rgb_to_hsv(r, g, b)
+    hue = h * 360
+
+    if s >= 0.15 and v >= 0.10:
+        if 175 <= hue <= 235:
+            base_r, base_g, base_b = (x / 255 for x in hex_to_rgb(accent))
+            _, base_l, _ = colorsys.rgb_to_hls(base_r, base_g, base_b)
+            _, l, _ = colorsys.rgb_to_hls(r, g, b)
+            factor = l / base_l if base_l > 0 else 1.0
+            return adjust_lightness(palette["color3"], factor)
+        if 255 <= hue <= 295:
+            return palette["color5"]
+        if hue <= 25 or hue >= 345:
+            return palette["color1"]
+        return palette["color4"]
+
+    lum = rel_lum(color)
+    if mode == "dark":
+        anchors = [
+            (0.000, palette["background"]),
+            (0.015, palette["background"]),
+            (0.045, palette["color0"]),
+            (0.080, mix(palette["color0"], palette["color8"], 0.35)),
+            (0.150, palette["color8"]),
+            (0.400, mix(palette["color8"], palette["foreground"], 0.50)),
+            (0.700, mix(palette["foreground"], palette["background"], 0.15)),
+            (1.000, palette["foreground"]),
+        ]
+    else:
+        anchors = [
+            (0.000, mix(palette["foreground"], "#000000", 0.40)),
+            (0.030, mix(palette["foreground"], "#000000", 0.30)),
+            (0.100, palette["foreground"]),
+            (0.250, mix(palette["foreground"], palette["background"], 0.25)),
+            (0.450, mix(palette["foreground"], palette["background"], 0.55)),
+            (0.650, palette["color0"]),
+            (0.820, palette["color0"]),
+            (0.900, mix(palette["color0"], palette["background"], 0.50)),
+            (0.950, palette["background"]),
+            (1.000, palette["background"]),
+        ]
+    return lerp_anchor(lum, anchors)
+
+
+def recolor_svg(svg: str, palette: dict[str, str], accent: str, mode: str) -> str:
+    pattern = re.compile(r"#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b")
+
+    def replace(match: re.Match[str]) -> str:
+        return map_color(match.group(0), palette, accent, mode)
+
+    return pattern.sub(replace, svg)
+
+
+def replace_general_colors(text: str, colors: dict[str, str]) -> str:
+    out: list[str] = []
+    in_general = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped == "[GeneralColors]":
+            in_general = True
+            out.append(line)
+            continue
+        if in_general and stripped.startswith("["):
+            in_general = False
+        if in_general and "=" in line:
+            key = line.split("=", 1)[0].strip()
+            if key in colors:
+                out.append(f"{key}={colors[key]}")
+                continue
+        out.append(line)
+    return "\n".join(out) + "\n"
+
+
+def write_kdeglobals(palette: dict[str, str], mode: str) -> None:
+    bg = palette["background"]
+    fg = palette["foreground"]
+    c0 = palette["color0"]
+    c1 = palette["color1"]
+    c2 = palette["color2"]
+    c3 = palette["color3"]
+    c4 = palette["color4"]
+    c5 = palette["color5"]
+    c8 = palette["color8"]
+    sel_fg = contrast_text(c3, palette)
+    view_alt = mix(bg, c0, 0.55)
+    button_alt = mix(c0, bg, 0.35)
+    header = mix(c0, bg, 0.25)
+    disabled_bg = mix(c0, bg, 0.45)
+    icon_theme = "Papirus" if mode == "light" else "Papirus-Dark"
+
+    sections = {
+        "ColorEffects:Disabled": {
+            "Color": disabled_bg,
+            "ColorAmount": "0.5",
+            "ColorEffect": "3",
+            "ContrastAmount": "0",
+            "ContrastEffect": "0",
+            "Enable": "false",
+            "IntensityAmount": "0",
+            "IntensityEffect": "0",
+        },
+        "ColorEffects:Inactive": {
+            "ChangeSelectionColor": "true",
+            "Color": bg,
+            "ColorAmount": "0.025",
+            "ColorEffect": "0",
+            "ContrastAmount": "0.1",
+            "ContrastEffect": "0",
+            "Enable": "true",
+            "IntensityAmount": "0",
+            "IntensityEffect": "0",
+        },
+        "Colors:Button": {
+            "BackgroundAlternate": button_alt,
+            "BackgroundNormal": c0,
+            "DecorationFocus": c3,
+            "DecorationHover": c4,
+            "ForegroundActive": fg,
+            "ForegroundInactive": c8,
+            "ForegroundLink": c5,
+            "ForegroundNegative": c1,
+            "ForegroundNeutral": c4,
+            "ForegroundNormal": fg,
+            "ForegroundPositive": c2,
+            "ForegroundVisited": c5,
+        },
+        "Colors:Complementary": {
+            "BackgroundAlternate": c0,
+            "BackgroundNormal": bg,
+            "DecorationFocus": c3,
+            "DecorationHover": c4,
+            "ForegroundActive": fg,
+            "ForegroundInactive": c8,
+            "ForegroundLink": c5,
+            "ForegroundNegative": c1,
+            "ForegroundNeutral": c4,
+            "ForegroundNormal": fg,
+            "ForegroundPositive": c2,
+            "ForegroundVisited": c5,
+        },
+        "Colors:Header": {
+            "BackgroundAlternate": header,
+            "BackgroundNormal": header,
+            "DecorationFocus": c3,
+            "DecorationHover": c4,
+            "ForegroundActive": fg,
+            "ForegroundInactive": c8,
+            "ForegroundLink": c5,
+            "ForegroundNegative": c1,
+            "ForegroundNeutral": c4,
+            "ForegroundNormal": fg,
+            "ForegroundPositive": c2,
+            "ForegroundVisited": c5,
+        },
+        "Colors:Header][Inactive": {
+            "BackgroundAlternate": header,
+            "BackgroundNormal": header,
+            "DecorationFocus": c3,
+            "DecorationHover": c4,
+            "ForegroundActive": fg,
+            "ForegroundInactive": c8,
+            "ForegroundLink": c5,
+            "ForegroundNegative": c1,
+            "ForegroundNeutral": c4,
+            "ForegroundNormal": fg,
+            "ForegroundPositive": c2,
+            "ForegroundVisited": c5,
+        },
+        "Colors:Selection": {
+            "BackgroundAlternate": c3,
+            "BackgroundNormal": c3,
+            "DecorationFocus": c3,
+            "DecorationHover": c4,
+            "ForegroundActive": sel_fg,
+            "ForegroundInactive": sel_fg,
+            "ForegroundLink": sel_fg,
+            "ForegroundNegative": sel_fg,
+            "ForegroundNeutral": sel_fg,
+            "ForegroundNormal": sel_fg,
+            "ForegroundPositive": sel_fg,
+            "ForegroundVisited": sel_fg,
+        },
+        "Colors:Tooltip": {
+            "BackgroundAlternate": c0,
+            "BackgroundNormal": c0,
+            "DecorationFocus": c3,
+            "DecorationHover": c4,
+            "ForegroundActive": fg,
+            "ForegroundInactive": c8,
+            "ForegroundLink": c5,
+            "ForegroundNegative": c1,
+            "ForegroundNeutral": c4,
+            "ForegroundNormal": fg,
+            "ForegroundPositive": c2,
+            "ForegroundVisited": c5,
+        },
+        "Colors:View": {
+            "BackgroundAlternate": view_alt,
+            "BackgroundNormal": bg,
+            "DecorationFocus": c3,
+            "DecorationHover": c4,
+            "ForegroundActive": fg,
+            "ForegroundInactive": c8,
+            "ForegroundLink": c5,
+            "ForegroundNegative": c1,
+            "ForegroundNeutral": c4,
+            "ForegroundNormal": fg,
+            "ForegroundPositive": c2,
+            "ForegroundVisited": c5,
+        },
+        "Colors:Window": {
+            "BackgroundAlternate": c0,
+            "BackgroundNormal": c0,
+            "DecorationFocus": c3,
+            "DecorationHover": c4,
+            "ForegroundActive": fg,
+            "ForegroundInactive": c8,
+            "ForegroundLink": c5,
+            "ForegroundNegative": c1,
+            "ForegroundNeutral": c4,
+            "ForegroundNormal": fg,
+            "ForegroundPositive": c2,
+            "ForegroundVisited": c5,
+        },
+        "General": {
+            "ColorScheme": "Wallust",
+            "Name": "Wallust",
+            "TerminalApplication": "kitty",
+            "XftHintStyle": "hintslight",
+            "XftSubPixel": "none",
+            "font": "Inter,11,-1,5,50,0,0,0,0,0",
+            "menuFont": "Inter,10,-1,5,50,0,0,0,0,0",
+            "toolBarFont": "Inter,10,-1,5,50,0,0,0,0,0",
+            "smallestReadableFont": "Inter,9,-1,5,50,0,0,0,0,0",
+            "fixed": "JetBrainsMono Nerd Font,11,-1,5,50,0,0,0,0,0",
+        },
+        "Icons": {
+            "Theme": icon_theme,
+        },
+        "KDE": {
+            "widgetStyle": "kvantum",
+            "SingleClick": "false",
+            "ShowDeleteCommand": "false",
+        },
+        "UiSettings": {
+            "ColorScheme": "Wallust",
+        },
+        "KFileDialog Settings": {
+            "Allow Expansion": "false",
+            "Automatically select filename extension": "true",
+            "Breadcrumb Navigation": "true",
+            "Decoration position": "2",
+            "LocationCombo Completionmode": "5",
+            "PathCombo Completionmode": "5",
+            "Show Bookmarks": "false",
+            "Show Full Path": "false",
+            "Show Inline Previews": "true",
+            "Show Preview": "false",
+            "Show Speedbar": "true",
+            "Show hidden files": "false",
+            "Sort by": "Name",
+            "Sort directories first": "true",
+            "Sort hidden files last": "false",
+            "Sort reversed": "false",
+            "Speedbar Width": "168",
+            "View Style": "Simple",
+        },
+        "PreviewSettings": {
+            "EnableRemoteFolderThumbnail": "false",
+            "MaximumRemoteSize": "0",
+        },
+    }
+
+    lines: list[str] = []
+    for section, values in sections.items():
+        lines.append(f"[{section}]")
+        for key, value in values.items():
+            lines.append(f"{key}={value}")
+        lines.append("")
+
+    target = HOME / ".config" / "kdeglobals"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("\n".join(lines))
+
+
+def write_kvantum(palette: dict[str, str], mode: str) -> None:
+    bg = palette["background"]
+    fg = palette["foreground"]
+    c0 = palette["color0"]
+    c3 = palette["color3"]
+    c4 = palette["color4"]
+    c5 = palette["color5"]
+    c8 = palette["color8"]
+    sel_fg = contrast_text(c3, palette)
+    theme_name = "WallustFlat"
+    # KvFlatLight ships a dark toolbar/URL field with dark icons, which is hard
+    # to read. KvArc keeps the light chrome light; KvFlat is the flatter dark
+    # base and matches the rest of the rice.
+    base_name = "KvArc" if mode == "light" else "KvFlat"
+    base_dir = Path("/usr/share/Kvantum") / base_name
+    if not (base_dir / f"{base_name}.svg").is_file():
+        raise SystemExit(f"kde-theme: missing base theme {base_dir}")
+
+    colors = {
+        "window.color": c0,
+        "base.color": bg,
+        "alt.base.color": mix(bg, c0, 0.60),
+        "button.color": c0,
+        "light.color": mix(c0, fg, 0.25),
+        "mid.light.color": mix(c0, fg, 0.12),
+        "dark.color": mix(bg, "#000000", 0.15),
+        "mid.color": c0,
+        "highlight.color": c3,
+        "inactive.highlight.color": mix(c3, bg, 0.35),
+        "text.color": fg,
+        "window.text.color": fg,
+        "button.text.color": fg,
+        "disabled.text.color": c8,
+        "tooltip.text.color": fg,
+        "highlight.text.color": sel_fg,
+        "link.color": c4,
+        "link.visited.color": c5,
+        "progress.indicator.text.color": sel_fg,
+    }
+
+    target_dir = HOME / ".config" / "Kvantum" / theme_name
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    config_text = (base_dir / f"{base_name}.kvconfig").read_text()
+    (target_dir / f"{theme_name}.kvconfig").write_text(
+        replace_general_colors(config_text, colors)
+    )
+
+    svg = (base_dir / f"{base_name}.svg").read_text()
+    accent = base_accent(svg)
+    (target_dir / f"{theme_name}.svg").write_text(
+        recolor_svg(svg, palette, accent, mode)
+    )
+
+    kv_config = HOME / ".config" / "Kvantum" / "kvantum.kvconfig"
+    kv_config.parent.mkdir(parents=True, exist_ok=True)
+    kv_config.write_text(f"[General]\ntheme={theme_name}\n")
+
+
+def main() -> None:
+    mode = sys.argv[1] if len(sys.argv) > 1 else ""
+    if mode not in ("light", "dark"):
+        mode = (CACHE / "effective-mode").read_text().strip()
+    if mode not in ("light", "dark"):
+        mode = "dark"
+    palette = read_palette()
+    write_kdeglobals(palette, mode)
+    write_kvantum(palette, mode)
+    print(f"kde-theme: wrote KDE/Kvantum colours for {mode} mode")
+
+
+if __name__ == "__main__":
+    main()

@@ -19,9 +19,10 @@ window {
 /* Individual action tiles */
 button {
     color: @foreground;
-    background-color: alpha(@color0, 0.94);
+    /* Tint the tiles with the wallpaper accent instead of a flat neutral. */
+    background-color: mix(@background, @color4, 0.18);
 
-    border: 1px solid alpha(@color8, 0.18);
+    border: 1px solid alpha(@color4, 0.50);
     border-radius: 22px;
 
     min-width: 176px;
@@ -48,12 +49,12 @@ button label {
 button:hover,
 button:focus {
     color: @foreground;
-    background-color: alpha(@color3, 0.35);
-    border-color: alpha(@color3, 0.85);
+    background-color: alpha(@color4, 0.35);
+    border-color: alpha(@color4, 0.90);
 }
 
 button:active {
-    background-color: alpha(@color3, 0.55);
+    background-color: alpha(@color4, 0.52);
     border-color: @color5;
 }
 

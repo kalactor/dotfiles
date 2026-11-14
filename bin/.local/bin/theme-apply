@@ -61,16 +61,13 @@ fi
 # 3. Qt: qt6ct + Kvantum. New Qt apps pick this up; running ones keep their
 # current style until reopened.
 qt_conf="$HOME/.config/qt6ct/qt6ct.conf"
-kv_conf="$HOME/.config/Kvantum/kvantum.kvconfig"
 if [ "$mode" = "light" ]; then
   qt_icon="Papirus"
-  kv_theme="KvArc"
 else
   qt_icon="Papirus-Dark"
-  kv_theme="KvArcDark"
 fi
 
-mkdir -p "$(dirname "$qt_conf")" "$(dirname "$kv_conf")"
+mkdir -p "$(dirname "$qt_conf")"
 if [ -f "$qt_conf" ]; then
   sed -i -E "s/^icon_theme=.*/icon_theme=$qt_icon/" "$qt_conf"
 else
@@ -87,10 +84,32 @@ fixed="JetBrainsMono Nerd Font,11,-1,5,50,0,0,0,0,0"
 EOF
 fi
 
-if [ -f "$kv_conf" ]; then
-  sed -i -E "s/^theme=.*/theme=$kv_theme/" "$kv_conf"
+# KDE reads the generated colour scheme; Kvantum paints its own surfaces and
+# selection from the theme SVG, so kde-theme bakes the wallust palette into both.
+if [ -x "$HOME/.local/bin/kde-theme" ] && "$HOME/.local/bin/kde-theme" "$mode"; then
+  :
 else
-  printf '[General]\ntheme=%s\n' "$kv_theme" > "$kv_conf"
+  notify-send -u normal "theme-apply" "kde-theme failed; using a stock Kvantum theme"
+  kv_conf="$HOME/.config/Kvantum/kvantum.kvconfig"
+  if [ "$mode" = "light" ]; then kv_theme="KvArc"; else kv_theme="KvArcDark"; fi
+  mkdir -p "$(dirname "$kv_conf")"
+  if [ -f "$kv_conf" ]; then
+    sed -i -E "s/^theme=.*/theme=$kv_theme/" "$kv_conf"
+  else
+    printf '[General]\ntheme=%s\n' "$kv_theme" > "$kv_conf"
+  fi
+fi
+
+# Dolphin's global view properties live in an xattr. Seed the compact Details
+# view on first use; the helper refuses to overwrite a user choice.
+if [ -x "$HOME/.local/bin/dolphin-view-defaults" ]; then
+  "$HOME/.local/bin/dolphin-view-defaults" >/dev/null 2>&1 || true
+fi
+
+# Telegram Desktop watches its generated theme file and reloads it live after
+# the one-time `telegram-theme --install` activation.
+if [ -x "$HOME/.local/bin/telegram-theme" ]; then
+  "$HOME/.local/bin/telegram-theme" "$mode" --wallpaper "$img" >/dev/null 2>&1 || true
 fi
 
 # Mark the generated palette so wall ensure-mode can repair a failed switch.
