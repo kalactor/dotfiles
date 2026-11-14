@@ -16,7 +16,9 @@
 > propagate, `rice-doctor` has exit codes, `rice-resume` repairs Waybar after
 > sleep, Hyprland is split into modules, and `./tests/smoke.sh` runs fixture
 > tests plus a fresh-profile Stow restore. Rofi includes a live keybind sheet,
-> calculator and emoji picker. Workspaces remain strictly numeric (`1-10`).
+> calculator and emoji picker. `rice-contrast` now enforces readable text and
+> ANSI colours against the composited terminal background while keeping
+> terminal transparency. Workspaces remain strictly numeric (`1-10`).
 > The system snapshot and research below are the historical starting point;
 > phase checkboxes and section 11 are the current roadmap.
 
@@ -61,7 +63,7 @@
 
 - Hyprland Lua config loads with no errors; monitors are positioned correctly; numlock is on; float rules for Satty/swayimg/pavucontrol/Blueman work.
 - Screenshots (grim + slurp + Satty), screen recording (gpu-screen-recorder + Waybar indicator), wallpaper script, Waybar, SwayNC, hyprpaper and hypridle are running.
-- wallust generates 16 targets from one wallpaper: Waybar, SwayNC, Hyprland, hyprlock, kitty, rofi, GTK 3/4, vim, wlogout, starship, btop, cava, SDDM, swayimg, and machine-readable palette files.
+- wallust generates 16 targets from one wallpaper: Waybar, SwayNC, Hyprland, hyprlock, kitty, rofi, GTK 3/4, vim, wlogout, starship, btop, cava, SDDM, swayimg, and machine-readable palette files. `rice-contrast` then enforces WCAG contrast against the composited terminal background and re-renders the semantic templates.
 - Audio (PipeWire/WirePlumber), NetworkManager, Bluetooth, CUPS, zram swap, timezone/NTP and GNOME keyring PAM unlock work.
 - vim is the default text editor; kitty is the terminal; SDDM successfully starts Hyprland.
 
@@ -77,7 +79,7 @@
 | 6 | **`Super+M` exit is broken** | **Resolved:** bound to `hyprshutdown` | Done |
 | 7 | **Keybind map differs from the old plan** | **Resolved:** lock `Super+L`, power `Super+Backspace`, DND `Super+Shift+N`, clipboard `Super+Shift+V`, picker `Super+Shift+C` | Done |
 | 8 | **Theming was only partial** | **Resolved:** wallust + `theme-apply` now cover shell, apps, Qt/KDE, SDDM, swayimg and Telegram | Done |
-| 9 | **Semantic red is dynamic** | **Resolved:** `@red = #e06c75`, `@accent = @color3` | Done |
+| 9 | **Semantic red is dynamic** | **Resolved:** status colours now come from contrast-safe ANSI slots; UI chrome uses `accent`/`accent_alt` instead of raw ANSI black | Done |
 | 10 | **No dotfiles safety net** | **Resolved 2026-11-12:** `~/dotfiles` is a git repo; configs are stowed; package lists and `system/etc/` copies saved | Phase 0 done |
 | 11 | **Missing utilities** | **Mostly resolved:** `cliphist`, `hyprpicker`, `hyprsunset`, `swayosd`, `ddcutil`, `qt6ct`, `kvantum`, `papirus-icon-theme`, `noto-fonts-cjk`, `hyprshutdown`, `fzf`, `zoxide`, `eza`, `bat`, `btop`, `cava`, `nwg-look` installed. Still optional: `waybar-module-pacman-updates` | Optional polish |
 | 12 | **SDDM was unthemed** | **Resolved 2026-11-13:** custom `rice` theme installed and palette/wallpaper synchronized | Done |
@@ -87,6 +89,7 @@
 | 16 | **Some configs were missing** | **Resolved:** `user-dirs.dirs`, `.vimrc`, generated `starship.toml`, `mpv.conf`, `chrome-flags.conf` and the modular Hyprland config all exist | Done |
 | 17 | **SwayNC CSS import is suspect** | **Resolved:** `@import "colors.css";` fixed; dedicated template defines every var; buttons/switches themed | Done |
 | 18 | **swayimg `w` does not recolor** | **Resolved:** `init.lua` calls `$HOME/.local/bin/wall set <path>` | Done |
+| 19 | **Light/dark palettes had poor contrast** | **Resolved 2026-11-14:** `rice-contrast` enforces 7:1 text, 4.5:1 ANSI, 3:1 borders against the composited terminal background; semantic roles replace ANSI black surfaces while kitty transparency stays on | Done |
 
 ### Missing packages relevant to this plan
 
@@ -263,7 +266,7 @@ require("autostart")
 - [x] Waybar running with the pulseaudio module (muted state styled)
 - [x] Omarchy leftovers removed (2026-11-12): dead `custom/voxtype`, `custom/idle-indicator`, `custom/notification-silencing-indicator`, `custom/screenrecording-indicator` and unused `custom/update` deleted; `battery`/`backlight` dropped (desktop); `custom/updatespacman` replaced by `custom/updates` using `checkupdates`; separators renamed to `custom/sep` / `custom/sep-dot`; no `omarchy` or `$OMARCHY_PATH` references remain
 - [x] **Waybar only on `DP-3`** (locked): `config.jsonc` has `"output": "DP-3"`; do not run a bar on `HDMI-A-1`
-- [x] `colors.css` import and `@define-color`; **but** `@red` is mapped to `@color3` (dynamic), not fixed
+- [x] `colors.css` import and `@define-color`; status modules use semantic `@danger`/`@warning`/`@success`/`@info`, chrome uses `@accent`/`@accent_alt`
 - [x] Waybar start/reload handled by `theme-apply` (`SIGUSR2`) and `rice-resume` (layer recreation when needed)
 
 **Notifications: SwayNC**
@@ -309,6 +312,10 @@ require("autostart")
 - [x] `theme-apply` created and **`wall` calls it** (absolute path, works with Hyprland's PATH)
 - [x] Hooks folder `~/.config/rice/hooks/theme-set.d/` created and stowed
 - [x] First run: `wallust run <image>` has generated every target
+- [x] Contrast stage: `rice-contrast` enforces 7:1 text, 4.5:1 ANSI, 3:1 borders against the composited terminal background and re-renders semantic templates
+- [x] Semantic palette: `surface`, `surface_alt`, `muted`, `border`, `accent`, `accent_alt`, `danger`, `success`, `warning`, `info`, `link`
+- [x] ANSI roles preserved with `wallust --palette ansidark16 --colorspace lchansi`; ANSI 0/7/15 verified as a 7:1 black/white pair
+- [x] `rice-contrast --check` covered by `tests/test_contrast.py` and `rice-doctor`
 - [x] swayimg `w` key calls `wall set <path>` so it recolors too
 - [x] Templates/targets for Hyprland (`colors.lua`), rofi (`colors.rasi`), kitty, hyprlock, GTK 3/4, vim, wlogout, btop, cava
 
@@ -372,7 +379,7 @@ Every row should end up driven by the wallpaper (✅ target) or deliberately fix
 | rofi | template → `colors.rasi`, `@import "colors.rasi"` in the theme | [x] generated; state variables mapped |
 | wlogout / power menu | template → `wlogout/colors.css`, `@import "colors.css";` | [x] generated |
 | hyprlock | template → `hyprlock-colors.conf` sourced by `hyprlock.conf` | [x] generated + tested |
-| Terminal (**kitty**) | template → `~/.config/kitty/colors.conf`, `include` it; reload kitty (`SIGUSR1`) | [x] generated |
+| Terminal (**kitty**) | template → `~/.config/kitty/colors.conf`, `include` it; reload kitty (`SIGUSR1`) | [x] generated; ANSI and foreground contrast enforced against the composited background |
 | Shell prompt (starship) | generated palette file or fixed palette | [x] wallust-generated `starship.toml` |
 | btop / cava / fastfetch | template into their theme/config files | [x] btop + cava generated by wallust; fastfetch static |
 | GTK 3 / 4 apps (Dolphin, ...) | template → `~/.config/gtk-3.0/gtk.css`, `gtk-4.0/gtk.css` | [x] generated + Adwaita-dark/Papirus; common settings apps restarted by `rice-gtk-reload` |
@@ -384,7 +391,7 @@ Every row should end up driven by the wallpaper (✅ target) or deliberately fix
 | Fonts | fixed | [x] JetBrainsMono + Inter + Noto CJK |
 | **SDDM login screen** | theme + wallpaper/colors | [x] custom `rice` theme configured; palette/wallpaper synced when writable |
 | Plymouth / bootloader | fixed theme or wallpaper sync (optional) | [ ] Plymouth not installed; systemd-boot |
-| Fixed semantic colors | `@red` for muted/errors stays red in every theme | [x] `@red = #e06c75`; `@accent = @color3` |
+| Fixed semantic colors | `@red` for muted/errors stays red in every theme | [x] status colours use contrast-safe ANSI slots; UI surfaces use semantic `surface`/`muted`/`accent` roles |
 
 Template idea for Hyprland (check wallust docs for the exact filters; `strip` removes the `#`):
 ```lua
@@ -663,6 +670,8 @@ project:
    current numeric workspace assignments unchanged.
 4. Add future targets through wallust/templates or a small helper invoked by
    `theme-apply`, with fixture coverage and a clear success/failure result.
+   Run `rice-contrast --check` after palette/template changes; keep the
+   contrast policy role-aware so transparency and ANSI semantics survive.
 5. Optional ideas only when actually wanted: monitor hotplug profiles,
    removable-drive automounting (`udiskie`), timed wallpaper rotation, a
    dedicated PDF reader, and semantic-color refinements. Browser theming stays

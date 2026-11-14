@@ -1,0 +1,656 @@
+#!/usr/bin/env python3
+"""Enforce readable contrast on the wallust palette and re-render templates.
+
+wallust remains the colour engine.  This stage:
+
+* reads the palette wallust generated (``~/.cache/rice/colors.env``);
+* optionally takes ANSI 0-15 from
+  ``wallust --palette ansidark16 --colorspace lchansi`` so red, green,
+  yellow, blue, magenta and cyan keep their terminal roles;
+* computes the effective terminal background from the wallpaper and the
+  kitty/Hyprland opacity stack;
+* moves colours in OKLCH lightness until they meet the contrast policy;
+* derives semantic UI colours (surface, muted, border, accent, ...);
+* re-renders every wallust template with the adjusted palette.
+
+The policy is deliberately role-aware.  ANSI 1-6 and 9-14 are text colours
+and must reach 4.5:1.  ANSI 0/7/15 keep the terminal black/white convention
+and are verified as a pair at 7:1.  UI surfaces use the derived ``surface``
+colours, so making ANSI black readable no longer turns every card into a
+dark slab.
+"""
+
+from __future__ import annotations
+
+import argparse
+import math
+import os
+import re
+import sys
+import tomllib
+from pathlib import Path
+
+HOME = Path.home()
+
+FG_TARGET = 7.0
+ANSI_TARGET = 4.5
+MUTED_TARGET = 4.5
+BORDER_TARGET = 3.0
+PAIR_TARGET = 7.0
+
+# ---------------------------------------------------------------------------
+# Colour math
+# ---------------------------------------------------------------------------
+
+
+def _srgb_to_linear(value: float) -> float:
+    value /= 255.0
+    return value / 12.92 if value <= 0.04045 else ((value + 0.055) / 1.055) ** 2.4
+
+
+def _linear_to_srgb(value: float) -> int:
+    value = max(0.0, min(1.0, value))
+    if value <= 0.0031308:
+        encoded = 12.92 * value
+    else:
+        encoded = 1.055 * (value ** (1 / 2.4)) - 0.055
+    return max(0, min(255, round(encoded * 255)))
+
+
+def hex_to_rgb(value: str) -> tuple[int, int, int]:
+    value = value.strip().lstrip("#")
+    if len(value) != 6:
+        raise ValueError(f"not a six-digit hex colour: {value!r}")
+    return tuple(int(value[index:index + 2], 16) for index in (0, 2, 4))
+
+
+def rgb_to_hex(rgb: tuple[int, int, int]) -> str:
+    return "#%02x%02x%02x" % tuple(max(0, min(255, round(channel))) for channel in rgb)
+
+
+def _hex_to_linear(value: str) -> tuple[float, float, float]:
+    return tuple(_srgb_to_linear(channel) for channel in hex_to_rgb(value))
+
+
+def _linear_to_oklab(rgb: tuple[float, float, float]) -> tuple[float, float, float]:
+    red, green, blue = rgb
+    l = 0.4122214708 * red + 0.5363325363 * green + 0.0514459929 * blue
+    m = 0.2119034982 * red + 0.6806995451 * green + 0.1073969566 * blue
+    s = 0.0883024619 * red + 0.2817188376 * green + 0.6299787005 * blue
+    l_, m_, s_ = (x ** (1 / 3) if x >= 0 else -((-x) ** (1 / 3)) for x in (l, m, s))
+    return (
+        0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_,
+        1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_,
+        0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_,
+    )
+
+
+def _oklab_to_linear(lab: tuple[float, float, float]) -> tuple[float, float, float]:
+    lightness, a, b = lab
+    l_ = lightness + 0.3963377774 * a + 0.2158037573 * b
+    m_ = lightness - 0.1055613458 * a - 0.0638541728 * b
+    s_ = lightness - 0.0894841775 * a - 1.2914855480 * b
+    l, m, s = l_ ** 3, m_ ** 3, s_ ** 3
+    return (
+        4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+        -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+        -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+    )
+
+
+def _oklab_to_oklch(lab: tuple[float, float, float]) -> tuple[float, float, float]:
+    lightness, a, b = lab
+    chroma = math.hypot(a, b)
+    hue = math.degrees(math.atan2(b, a)) % 360.0
+    return lightness, chroma, hue
+
+
+def _oklch_to_oklab(lch: tuple[float, float, float]) -> tuple[float, float, float]:
+    lightness, chroma, hue = lch
+    radians = math.radians(hue)
+    return lightness, chroma * math.cos(radians), chroma * math.sin(radians)
+
+
+def _in_gamut(rgb: tuple[float, float, float], epsilon: float = 1e-4) -> bool:
+    return all(-epsilon <= channel <= 1.0 + epsilon for channel in rgb)
+
+
+def oklch_to_hex(lch: tuple[float, float, float]) -> str:
+    """Convert OKLCH to hex, reducing chroma until the colour fits sRGB."""
+    lightness, chroma, hue = lch
+    linear = _oklab_to_linear(_oklch_to_oklab((lightness, chroma, hue)))
+    if _in_gamut(linear):
+        return rgb_to_hex(tuple(_linear_to_srgb(channel) for channel in linear))
+    low, high = 0.0, chroma
+    for _ in range(28):
+        middle = (low + high) / 2.0
+        candidate = _oklab_to_linear(_oklch_to_oklab((lightness, middle, hue)))
+        if _in_gamut(candidate):
+            low = middle
+        else:
+            high = middle
+    linear = _oklab_to_linear(_oklch_to_oklab((lightness, low, hue)))
+    return rgb_to_hex(tuple(_linear_to_srgb(channel) for channel in linear))
+
+
+def hex_to_oklch(value: str) -> tuple[float, float, float]:
+    return _oklab_to_oklch(_linear_to_oklab(_hex_to_linear(value)))
+
+
+def rel_lum(value: str) -> float:
+    red, green, blue = _hex_to_linear(value)
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue
+
+
+def contrast(first: str, second: str) -> float:
+    one, two = rel_lum(first), rel_lum(second)
+    high, low = max(one, two), min(one, two)
+    return (high + 0.05) / (low + 0.05)
+
+
+def max_contrast(background: str) -> float:
+    return max(contrast("#000000", background), contrast("#ffffff", background))
+
+
+def best_fg(background: str) -> str:
+    return "#000000" if contrast("#000000", background) >= contrast("#ffffff", background) else "#ffffff"
+
+
+def adjust(color: str, background: str, target: float) -> str:
+    """Move a colour's OKLCH lightness away from *background* until target."""
+    if contrast(color, background) >= target - 1e-9:
+        return color
+    lightness, chroma, hue = hex_to_oklch(color)
+    dark_max = contrast("#000000", background)
+    light_max = contrast("#ffffff", background)
+    darken = dark_max >= light_max
+    extreme = "#000000" if darken else "#ffffff"
+    if contrast(extreme, background) < target - 1e-9:
+        return extreme
+    if darken:
+        low, high = 0.0, lightness
+    else:
+        low, high = lightness, 1.0
+    for _ in range(40):
+        middle = (low + high) / 2.0
+        candidate = oklch_to_hex((middle, chroma, hue))
+        if contrast(candidate, background) >= target - 1e-9:
+            if darken:
+                low = middle
+            else:
+                high = middle
+        else:
+            if darken:
+                high = middle
+            else:
+                low = middle
+    candidate = oklch_to_hex((low if darken else high, chroma, hue))
+    if contrast(candidate, background) >= target - 1e-9:
+        return candidate
+    for step in range(1, 201):
+        fraction = step / 200.0
+        candidate_lightness = lightness * (1 - fraction) if darken else lightness + (1 - lightness) * fraction
+        candidate = oklch_to_hex((candidate_lightness, chroma, hue))
+        if contrast(candidate, background) >= target - 1e-9:
+            return candidate
+    return extreme
+
+
+def force_lightness(color: str, lightness: float, chroma_cap: float) -> str:
+    _, chroma, hue = hex_to_oklch(color)
+    return oklch_to_hex((lightness, min(chroma, chroma_cap), hue))
+
+
+def mix(first: str, second: str, amount: float) -> str:
+    one = _linear_to_oklab(_hex_to_linear(first))
+    two = _linear_to_oklab(_hex_to_linear(second))
+    lab = tuple(a + (b - a) * amount for a, b in zip(one, two))
+    return oklch_to_hex(_oklab_to_oklch(lab))
+
+
+def desaturate(color: str, chroma_cap: float) -> str:
+    lightness, chroma, hue = hex_to_oklch(color)
+    return oklch_to_hex((lightness, min(chroma, chroma_cap), hue))
+
+
+def readable_fg(color: str, preferred: str) -> str:
+    if contrast(preferred, color) >= ANSI_TARGET - 1e-9:
+        return preferred
+    return best_fg(color)
+
+
+# ---------------------------------------------------------------------------
+# Palette
+# ---------------------------------------------------------------------------
+
+
+def read_palette(path: Path) -> dict[str, str]:
+    palette: dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        palette[key.strip()] = value.strip()
+    return palette
+
+
+def parse_ansi_scheme(path: Path) -> dict[str, str]:
+    values = [
+        line.strip().lower()
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if re.fullmatch(r"#[0-9a-fA-F]{6}", line.strip())
+    ]
+    if len(values) != 16:
+        raise ValueError(f"expected 16 ANSI colours in {path}, found {len(values)}")
+    return {f"color{index}": values[index] for index in range(16)}
+
+
+def palette_text(palette: dict[str, str]) -> str:
+    order = (
+        ["background", "foreground", "cursor"]
+        + [f"color{index}" for index in range(16)]
+        + [
+            "effective_background",
+            "surface",
+            "surface_alt",
+            "surface_fg",
+            "muted",
+            "border",
+            "accent",
+            "accent_alt",
+            "accent_fg",
+            "accent_alt_fg",
+            "accent_source",
+            "accent_alt_source",
+            "danger",
+            "danger_fg",
+            "success",
+            "success_fg",
+            "warning",
+            "warning_fg",
+            "info",
+            "link",
+            "selection_bg",
+            "selection_fg",
+        ]
+    )
+    lines = [
+        "# Generated by wallust + rice-contrast — do not edit by hand.",
+        "# Contrast is enforced against the composited terminal background.",
+    ]
+    for key in order:
+        if key in palette:
+            lines.append(f"{key}={palette[key]}")
+    for key in sorted(set(palette) - set(order)):
+        lines.append(f"{key}={palette[key]}")
+    return "\n".join(lines) + "\n"
+
+
+def compute_palette(
+    base: dict[str, str],
+    ansi: dict[str, str] | None,
+    effective_background: str,
+) -> dict[str, str]:
+    palette = {
+        key: value.lower() if value.startswith("#") else value
+        for key, value in base.items()
+    }
+    if ansi:
+        for index in range(16):
+            key = f"color{index}"
+            if key in ansi:
+                palette[key] = ansi[key].lower()
+
+    palette["foreground"] = adjust(palette["foreground"], effective_background, FG_TARGET)
+    palette["cursor"] = adjust(palette["cursor"], effective_background, ANSI_TARGET)
+
+    for index in list(range(1, 7)) + list(range(8, 15)):
+        key = f"color{index}"
+        palette[key] = adjust(palette[key], effective_background, ANSI_TARGET)
+
+    # ANSI 0/7/15 are the terminal's black/white pair.  Keep the convention,
+    # but make sure a TUI dialog can actually read white-on-black.
+    color0 = palette["color0"]
+    color7 = palette["color7"]
+    color15 = palette["color15"]
+    if contrast(color0, color7) < PAIR_TARGET - 1e-9:
+        color0 = force_lightness(color0, 0.10, 0.06)
+        color7 = force_lightness(color7, 0.96, 0.03)
+    if contrast(color0, color15) < PAIR_TARGET - 1e-9:
+        color15 = force_lightness(color15, 0.96, 0.03)
+    palette["color0"] = color0
+    palette["color7"] = color7
+    palette["color15"] = color15
+
+    background = palette["background"]
+    foreground = palette["foreground"]
+    palette["surface"] = adjust(mix(background, foreground, 0.06), foreground, ANSI_TARGET)
+    palette["surface_alt"] = adjust(mix(background, foreground, 0.10), foreground, ANSI_TARGET)
+    palette["surface_fg"] = foreground
+    palette["muted"] = desaturate(
+        adjust(palette["color8"], effective_background, MUTED_TARGET), 0.06
+    )
+    palette["border"] = adjust(
+        mix(background, palette["muted"], 0.55), effective_background, BORDER_TARGET
+    )
+    # UI chrome keeps the wallpaper's salience accents; status colours keep
+    # the terminal's red/green/yellow/blue semantics.  Preserve the salience
+    # source colours so re-running on an already-adjusted palette (notably
+    # ``--check``) does not replace them with the ANSI yellow/magenta slots.
+    accent_source = palette.get("accent_source", base.get("color3", palette["color3"]))
+    accent_alt_source = palette.get("accent_alt_source", base.get("color5", palette["color5"]))
+    palette["accent_source"] = accent_source.lower()
+    palette["accent_alt_source"] = accent_alt_source.lower()
+    palette["accent"] = adjust(accent_source, effective_background, ANSI_TARGET)
+    palette["accent_alt"] = adjust(accent_alt_source, effective_background, ANSI_TARGET)
+    palette["accent_fg"] = readable_fg(palette["accent"], background)
+    palette["accent_alt_fg"] = readable_fg(palette["accent_alt"], background)
+    palette["danger"] = adjust(palette["color1"], effective_background, ANSI_TARGET)
+    palette["danger_fg"] = readable_fg(palette["danger"], background)
+    palette["success"] = adjust(palette["color2"], effective_background, ANSI_TARGET)
+    palette["success_fg"] = readable_fg(palette["success"], background)
+    palette["warning"] = adjust(palette["color3"], effective_background, ANSI_TARGET)
+    palette["warning_fg"] = readable_fg(palette["warning"], background)
+    palette["info"] = adjust(palette["color6"], effective_background, ANSI_TARGET)
+    palette["link"] = adjust(palette["color4"], effective_background, ANSI_TARGET)
+    palette["selection_bg"] = palette["accent"]
+    palette["selection_fg"] = palette["accent_fg"]
+    palette["effective_background"] = effective_background
+    return palette
+
+
+def check_palette(palette: dict[str, str], effective_background: str | None = None) -> list[str]:
+    background = effective_background or palette.get("effective_background", palette["background"])
+    failures: list[str] = []
+
+    def need(label: str, first: str, second: str, target: float) -> None:
+        ratio = contrast(first, second)
+        if ratio < target - 0.02:
+            failures.append(f"{label}: {first} on {second} is {ratio:.2f}:1, needs {target:.1f}:1")
+
+    foreground_target = min(FG_TARGET, max_contrast(background))
+    need("foreground", palette["foreground"], background, max(4.5, foreground_target))
+    need("cursor", palette["cursor"], background, ANSI_TARGET)
+    for index in list(range(1, 7)) + list(range(8, 15)):
+        need(f"color{index}", palette[f"color{index}"], background, ANSI_TARGET)
+    need("ANSI black/white", palette["color0"], palette["color7"], PAIR_TARGET)
+    need("ANSI black/bright-white", palette["color0"], palette["color15"], PAIR_TARGET)
+    need("surface text", palette["surface_fg"], palette["surface"], ANSI_TARGET)
+    need("surface-alt text", palette["surface_fg"], palette["surface_alt"], ANSI_TARGET)
+    need("muted", palette["muted"], background, MUTED_TARGET)
+    need("border", palette["border"], background, BORDER_TARGET)
+    for name in ("accent", "accent_alt", "danger", "success", "warning", "info", "link"):
+        need(name, palette[name], background, ANSI_TARGET)
+    for name in ("accent", "accent_alt", "danger", "success", "warning"):
+        need(f"{name} text", palette[f"{name}_fg"], palette[name], ANSI_TARGET)
+    need("selection text", palette["selection_fg"], palette["selection_bg"], ANSI_TARGET)
+    return failures
+
+
+def check_report(
+    palette: dict[str, str], background: str
+) -> list[tuple[str, str, str, float, float]]:
+    rows: list[tuple[str, str, str, float, float]] = []
+
+    def add(label: str, color: str, target: float, against: str = background) -> None:
+        rows.append((label, color, against, contrast(color, against), target))
+
+    add("foreground", palette["foreground"], min(FG_TARGET, max_contrast(background)))
+    add("cursor", palette["cursor"], ANSI_TARGET)
+    for index in list(range(1, 7)) + list(range(8, 15)):
+        add(f"color{index}", palette[f"color{index}"], ANSI_TARGET)
+    add("ANSI pair", palette["color0"], PAIR_TARGET, palette["color7"])
+    add("ANSI bright pair", palette["color0"], PAIR_TARGET, palette["color15"])
+    add("surface", palette["surface_fg"], ANSI_TARGET, palette["surface"])
+    add("surface-alt", palette["surface_fg"], ANSI_TARGET, palette["surface_alt"])
+    add("muted", palette["muted"], MUTED_TARGET)
+    add("border", palette["border"], BORDER_TARGET)
+    for name in ("accent", "accent_alt", "danger", "success", "warning", "info", "link"):
+        add(name, palette[name], ANSI_TARGET)
+    for name in ("accent", "accent_alt", "danger", "success", "warning"):
+        add(f"{name} text", palette[f"{name}_fg"], ANSI_TARGET, palette[name])
+    add("selection", palette["selection_fg"], ANSI_TARGET, palette["selection_bg"])
+    return rows
+
+
+# ---------------------------------------------------------------------------
+# Wallpaper / opacity
+# ---------------------------------------------------------------------------
+
+
+def sample_wallpaper(path: Path) -> str | None:
+    """Average the central half of the wallpaper; blur makes this representative."""
+    try:
+        from PIL import Image
+    except ImportError:
+        return None
+    try:
+        with Image.open(path) as image:
+            rgb = image.convert("RGB")
+            width, height = rgb.size
+            left, top = width // 4, height // 4
+            crop = rgb.crop((left, top, width - left, height - top))
+            resampling = getattr(Image, "Resampling", Image).BOX
+            pixel = crop.resize((1, 1), resampling).getpixel((0, 0))
+    except OSError:
+        return None
+    return rgb_to_hex(tuple(pixel[:3]))
+
+
+def kitty_opacity(path: Path | None = None) -> float:
+    path = path or HOME / ".config" / "kitty" / "kitty.conf"
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return 0.85
+    match = re.search(r"^\s*background_opacity\s+([0-9.]+)", text, re.MULTILINE)
+    return float(match.group(1)) if match else 0.85
+
+
+def hypr_opacity(path: Path | None = None) -> float:
+    path = path or HOME / ".config" / "hypr" / "look.lua"
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return 0.85
+    values = [
+        float(value)
+        for value in re.findall(r"(?:active|inactive)_opacity\s*=\s*([0-9.]+)", text)
+    ]
+    return min(values) if values else 0.85
+
+
+def effective_background(
+    palette_background: str,
+    wallpaper: str | None,
+    opacity: float,
+) -> str:
+    if wallpaper is None:
+        return palette_background
+    background = hex_to_rgb(palette_background)
+    sampled = hex_to_rgb(wallpaper)
+    return rgb_to_hex(
+        tuple(round(opacity * one + (1.0 - opacity) * two) for one, two in zip(background, sampled))
+    )
+
+
+# ---------------------------------------------------------------------------
+# Template rendering
+# ---------------------------------------------------------------------------
+
+_VARIABLE = re.compile(r"\{\{\s*([A-Za-z_][A-Za-z0-9_]*)(\[1:\])?\s*\}\}")
+
+
+def render_text(text: str, context: dict[str, str], name: str = "<template>") -> str:
+    def replace(match: re.Match[str]) -> str:
+        key = match.group(1)
+        if key not in context:
+            raise KeyError(f"{name}: unknown template variable {key!r}")
+        value = context[key]
+        if match.group(2):
+            if not value.startswith("#"):
+                raise ValueError(f"{name}: {key} is not a hex colour")
+            value = value[1:]
+        return value
+
+    rendered = _VARIABLE.sub(replace, text)
+    if "{{" in rendered or "}}" in rendered:
+        raise ValueError(f"{name}: unsupported template expression")
+    return rendered
+
+
+def parse_wallust_templates(config: Path) -> list[tuple[str, Path, Path]]:
+    data = tomllib.loads(config.read_text(encoding="utf-8"))
+    entries = data.get("templates", {})
+    if not isinstance(entries, dict):
+        raise ValueError(f"{config}: [templates] is not a table")
+    result: list[tuple[str, Path, Path]] = []
+    for name, entry in entries.items():
+        if not isinstance(entry, dict):
+            continue
+        template = entry.get("template", entry.get("src"))
+        target = entry.get("target", entry.get("dst"))
+        if not template or not target:
+            continue
+        if entry.get("pywal"):
+            raise ValueError(f"{name}: pywal templates are not supported")
+        template_path = Path(template)
+        if not template_path.is_absolute():
+            # wallust resolves relative templates under <config-dir>/templates.
+            # Keep accepting templates stored beside wallust.toml as well.
+            direct = config.parent / template_path
+            nested = config.parent / "templates" / template_path
+            template_path = direct if direct.is_file() else nested
+        result.append((name, template_path, Path(os.path.expanduser(str(target)))))
+    return result
+
+
+def write_text_atomic(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + ".tmp")
+    temporary.write_text(text, encoding="utf-8")
+    os.replace(temporary, path)
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+
+def _mode() -> str:
+    try:
+        value = (HOME / ".cache" / "rice" / "effective-mode").read_text(encoding="utf-8").strip()
+    except OSError:
+        return "dark"
+    return value if value in ("light", "dark") else "dark"
+
+
+def _wallpaper() -> Path | None:
+    candidate = HOME / ".cache" / "rice" / "wallpaper"
+    return candidate if candidate.is_file() else None
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Enforce WCAG contrast on the wallust palette and re-render templates.",
+    )
+    parser.add_argument("--palette-file", type=Path, help="palette to read/write (default: ~/.cache/rice/colors.env)")
+    parser.add_argument("--config", type=Path, help="wallust.toml (default: ~/.config/wallust/wallust.toml)")
+    parser.add_argument("--image", type=Path, help="wallpaper used to compute the composited background")
+    parser.add_argument("--mode", choices=("light", "dark"), help="palette mode (default: ~/.cache/rice/effective-mode)")
+    parser.add_argument("--ansi", type=Path, help="16-line ANSI scheme from wallust --print-scheme")
+    parser.add_argument("--effective-bg", help="override the composited background (hex)")
+    parser.add_argument("--opacity", type=float, help="override the terminal background opacity (0-1)")
+    parser.add_argument("--check", action="store_true", help="report contrast and exit nonzero on failure; do not write")
+    parser.add_argument("--no-render", action="store_true", help="write the palette but do not re-render templates")
+    parser.add_argument("--quiet", action="store_true", help="only print failures")
+    args = parser.parse_args(argv)
+
+    palette_file = args.palette_file or HOME / ".cache" / "rice" / "colors.env"
+    config = args.config or HOME / ".config" / "wallust" / "wallust.toml"
+    mode = args.mode or _mode()
+    image = args.image or _wallpaper()
+
+    if not palette_file.is_file():
+        print(f"rice-contrast: no palette at {palette_file}", file=sys.stderr)
+        return 1
+
+    try:
+        base = read_palette(palette_file)
+    except OSError as error:
+        print(f"rice-contrast: cannot read {palette_file}: {error}", file=sys.stderr)
+        return 1
+
+    ansi: dict[str, str] | None = None
+    if args.ansi:
+        try:
+            ansi = parse_ansi_scheme(args.ansi)
+        except (OSError, ValueError) as error:
+            print(f"rice-contrast: {error}; using base ANSI colours", file=sys.stderr)
+
+    if args.effective_bg:
+        composited = args.effective_bg.lower()
+        wallpaper_sample = None
+        opacity = None
+    else:
+        wallpaper_sample = sample_wallpaper(image) if image else None
+        opacity = args.opacity if args.opacity is not None else kitty_opacity() * hypr_opacity()
+        composited = effective_background(base["background"], wallpaper_sample, opacity)
+
+    palette = compute_palette(base, ansi, composited)
+
+    if args.check:
+        failures = check_palette(palette, composited)
+        if not args.quiet:
+            print(
+                f"Contrast against composited background {composited} "
+                f"(text {FG_TARGET:.1f}:1, ANSI {ANSI_TARGET:.1f}:1, border {BORDER_TARGET:.1f}:1)"
+            )
+            for label, color, against, ratio, target in check_report(palette, composited):
+                status = "ok" if ratio >= target - 0.02 else "FAIL"
+                print(f"  {label:<15} {color} on {against}  {ratio:5.2f}:1  {status}")
+        for failure in failures:
+            print(f"rice-contrast: {failure}", file=sys.stderr)
+        return 1 if failures else 0
+
+    rendered = 0
+    if not args.no_render:
+        if config.is_file():
+            try:
+                entries = parse_wallust_templates(config)
+            except (OSError, ValueError) as error:
+                print(f"rice-contrast: cannot read {config}: {error}", file=sys.stderr)
+                return 1
+            for name, template_path, target_path in entries:
+                try:
+                    text = template_path.read_text(encoding="utf-8")
+                    write_text_atomic(target_path, render_text(text, palette, name))
+                except (OSError, KeyError, ValueError) as error:
+                    print(f"rice-contrast: {name}: {error}", file=sys.stderr)
+                    return 1
+                rendered += 1
+        else:
+            print(f"rice-contrast: {config} not found; palette written without templates", file=sys.stderr)
+
+    # Write the extended palette last: the wallust template only knows the
+    # base keys, while helpers need the semantic colours as well.
+    write_text_atomic(palette_file, palette_text(palette))
+
+    if not args.quiet:
+        details = f"effective background {composited}"
+        if wallpaper_sample:
+            details += f" (wallpaper {wallpaper_sample}"
+            if opacity is not None:
+                details += f", opacity {opacity:.3f}"
+            details += ")"
+        print(
+            f"rice-contrast: {mode} palette, {details}; "
+            f"foreground {palette['foreground']} at {contrast(palette['foreground'], composited):.2f}:1; "
+            f"{rendered} template(s) rendered"
+        )
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

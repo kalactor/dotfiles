@@ -225,6 +225,10 @@ def map_color(color: str, palette: dict[str, str], accent: str, mode: str) -> st
     r, g, b = (x / 255 for x in hex_to_rgb(color))
     h, s, v = colorsys.rgb_to_hsv(r, g, b)
     hue = h * 360
+    surface = palette.get("surface", palette["color0"])
+    muted = palette.get("muted", palette["color8"])
+    accent_color = palette.get("accent", palette["color3"])
+    accent_alt = palette.get("accent_alt", palette["color5"])
 
     if s >= 0.15 and v >= 0.10:
         if 175 <= hue <= 235:
@@ -232,22 +236,22 @@ def map_color(color: str, palette: dict[str, str], accent: str, mode: str) -> st
             _, base_l, _ = colorsys.rgb_to_hls(base_r, base_g, base_b)
             _, l, _ = colorsys.rgb_to_hls(r, g, b)
             factor = l / base_l if base_l > 0 else 1.0
-            return adjust_lightness(palette["color3"], factor)
+            return adjust_lightness(accent_color, factor)
         if 255 <= hue <= 295:
-            return palette["color5"]
+            return accent_alt
         if hue <= 25 or hue >= 345:
-            return palette["color1"]
-        return palette["color4"]
+            return palette.get("danger", palette["color1"])
+        return palette.get("link", palette["color4"])
 
     lum = rel_lum(color)
     if mode == "dark":
         anchors = [
             (0.000, palette["background"]),
             (0.015, palette["background"]),
-            (0.045, palette["color0"]),
-            (0.080, mix(palette["color0"], palette["color8"], 0.35)),
-            (0.150, palette["color8"]),
-            (0.400, mix(palette["color8"], palette["foreground"], 0.50)),
+            (0.045, surface),
+            (0.080, mix(surface, muted, 0.35)),
+            (0.150, muted),
+            (0.400, mix(muted, palette["foreground"], 0.50)),
             (0.700, mix(palette["foreground"], palette["background"], 0.15)),
             (1.000, palette["foreground"]),
         ]
@@ -258,9 +262,9 @@ def map_color(color: str, palette: dict[str, str], accent: str, mode: str) -> st
             (0.100, palette["foreground"]),
             (0.250, mix(palette["foreground"], palette["background"], 0.25)),
             (0.450, mix(palette["foreground"], palette["background"], 0.55)),
-            (0.650, palette["color0"]),
-            (0.820, palette["color0"]),
-            (0.900, mix(palette["color0"], palette["background"], 0.50)),
+            (0.650, surface),
+            (0.820, surface),
+            (0.900, mix(surface, palette["background"], 0.50)),
             (0.950, palette["background"]),
             (1.000, palette["background"]),
         ]
@@ -299,14 +303,15 @@ def replace_general_colors(text: str, colors: dict[str, str]) -> str:
 def write_kdeglobals(palette: dict[str, str], mode: str) -> None:
     bg = palette["background"]
     fg = palette["foreground"]
-    c0 = palette["color0"]
-    c1 = palette["color1"]
-    c2 = palette["color2"]
-    c3 = palette["color3"]
-    c4 = palette["color4"]
-    c5 = palette["color5"]
-    c8 = palette["color8"]
-    sel_fg = contrast_text(c3, palette)
+    c0 = palette.get("surface", palette["color0"])
+    c1 = palette.get("danger", palette["color1"])
+    c2 = palette.get("success", palette["color2"])
+    c3 = palette.get("accent", palette["color3"])
+    c4 = palette.get("warning", palette["color4"])
+    c5 = palette.get("accent_alt", palette["color5"])
+    c8 = palette.get("muted", palette["color8"])
+    link = palette.get("link", palette["color4"])
+    sel_fg = palette.get("accent_fg") or contrast_text(c3, palette)
     view_alt = mix(bg, c0, 0.55)
     button_alt = mix(c0, bg, 0.35)
     header = mix(c0, bg, 0.25)
@@ -342,7 +347,7 @@ def write_kdeglobals(palette: dict[str, str], mode: str) -> None:
             "DecorationHover": c4,
             "ForegroundActive": fg,
             "ForegroundInactive": c8,
-            "ForegroundLink": c5,
+            "ForegroundLink": link,
             "ForegroundNegative": c1,
             "ForegroundNeutral": c4,
             "ForegroundNormal": fg,
@@ -356,7 +361,7 @@ def write_kdeglobals(palette: dict[str, str], mode: str) -> None:
             "DecorationHover": c4,
             "ForegroundActive": fg,
             "ForegroundInactive": c8,
-            "ForegroundLink": c5,
+            "ForegroundLink": link,
             "ForegroundNegative": c1,
             "ForegroundNeutral": c4,
             "ForegroundNormal": fg,
@@ -370,7 +375,7 @@ def write_kdeglobals(palette: dict[str, str], mode: str) -> None:
             "DecorationHover": c4,
             "ForegroundActive": fg,
             "ForegroundInactive": c8,
-            "ForegroundLink": c5,
+            "ForegroundLink": link,
             "ForegroundNegative": c1,
             "ForegroundNeutral": c4,
             "ForegroundNormal": fg,
@@ -384,7 +389,7 @@ def write_kdeglobals(palette: dict[str, str], mode: str) -> None:
             "DecorationHover": c4,
             "ForegroundActive": fg,
             "ForegroundInactive": c8,
-            "ForegroundLink": c5,
+            "ForegroundLink": link,
             "ForegroundNegative": c1,
             "ForegroundNeutral": c4,
             "ForegroundNormal": fg,
@@ -412,7 +417,7 @@ def write_kdeglobals(palette: dict[str, str], mode: str) -> None:
             "DecorationHover": c4,
             "ForegroundActive": fg,
             "ForegroundInactive": c8,
-            "ForegroundLink": c5,
+            "ForegroundLink": link,
             "ForegroundNegative": c1,
             "ForegroundNeutral": c4,
             "ForegroundNormal": fg,
@@ -426,7 +431,7 @@ def write_kdeglobals(palette: dict[str, str], mode: str) -> None:
             "DecorationHover": c4,
             "ForegroundActive": fg,
             "ForegroundInactive": c8,
-            "ForegroundLink": c5,
+            "ForegroundLink": link,
             "ForegroundNegative": c1,
             "ForegroundNeutral": c4,
             "ForegroundNormal": fg,
@@ -440,7 +445,7 @@ def write_kdeglobals(palette: dict[str, str], mode: str) -> None:
             "DecorationHover": c4,
             "ForegroundActive": fg,
             "ForegroundInactive": c8,
-            "ForegroundLink": c5,
+            "ForegroundLink": link,
             "ForegroundNegative": c1,
             "ForegroundNeutral": c4,
             "ForegroundNormal": fg,
@@ -504,12 +509,13 @@ def write_kdeglobals(palette: dict[str, str], mode: str) -> None:
 def write_kvantum(palette: dict[str, str], mode: str) -> None:
     bg = palette["background"]
     fg = palette["foreground"]
-    c0 = palette["color0"]
-    c3 = palette["color3"]
-    c4 = palette["color4"]
-    c5 = palette["color5"]
-    c8 = palette["color8"]
-    sel_fg = contrast_text(c3, palette)
+    c0 = palette.get("surface", palette["color0"])
+    c3 = palette.get("accent", palette["color3"])
+    c4 = palette.get("warning", palette["color4"])
+    c5 = palette.get("accent_alt", palette["color5"])
+    c8 = palette.get("muted", palette["color8"])
+    link = palette.get("link", palette["color4"])
+    sel_fg = palette.get("accent_fg") or contrast_text(c3, palette)
     theme_name = "WallustFlat"
     # KvFlatLight ships a dark toolbar/URL field with dark icons, which is hard
     # to read. KvArc keeps the light chrome light; KvFlat is the flatter dark
@@ -536,7 +542,7 @@ def write_kvantum(palette: dict[str, str], mode: str) -> None:
         "disabled.text.color": c8,
         "tooltip.text.color": fg,
         "highlight.text.color": sel_fg,
-        "link.color": c4,
+        "link.color": link,
         "link.visited.color": c5,
         "progress.indicator.text.color": sel_fg,
     }

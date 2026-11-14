@@ -91,11 +91,6 @@ def rgba(value: str, alpha: str) -> str:
     return value + alpha.lower()
 
 
-def hsl_hex(hue: float, saturation: float, lightness: float) -> str:
-    red, green, blue = colorsys.hls_to_rgb(hue, lightness, saturation)
-    return hex_color((red * 255, green * 255, blue * 255))
-
-
 def relative_luminance(value: str) -> float:
     channels = []
     for channel in rgb(value):
@@ -200,29 +195,22 @@ def mode_from_state() -> str:
 def semantic_colors(palette: dict[str, str], mode: str) -> dict[str, str]:
     background = palette["background"]
     foreground = palette["foreground"]
-    accent = palette["color3"]
-    muted = palette["color8"]
-
-    red, green, blue = (channel / 255 for channel in rgb(accent))
-    hue, lightness, saturation = colorsys.rgb_to_hls(red, green, blue)
-    saturation = max(0.35, min(0.65, saturation * 0.65))
-    semantic_lightness = 0.58 if mode == "dark" else 0.38
-
-    def semantic(hue_degrees: float) -> str:
-        return hsl_hex(hue_degrees / 360.0, saturation, semantic_lightness)
+    accent = palette.get("accent", palette["color3"])
+    accent_alt = palette.get("accent_alt", palette.get("color5", palette["color4"]))
+    muted = palette.get("muted", palette["color8"])
 
     colors = {
         "background": background,
         "foreground": foreground,
         "accent": accent,
-        "accent_alt": palette["color4"],
+        "accent_alt": accent_alt,
         "muted": muted,
-        "red": semantic(0),
-        "yellow": semantic(45),
-        "green": semantic(145),
-        "cyan": semantic(185),
-        "blue": semantic(220),
-        "magenta": semantic(325),
+        "red": palette.get("danger", palette["color1"]),
+        "yellow": palette.get("warning", palette["color3"]),
+        "green": palette.get("success", palette["color2"]),
+        "cyan": palette.get("info", palette["color6"]),
+        "blue": palette.get("link", palette["color4"]),
+        "magenta": accent_alt,
     }
 
     colors["selection"] = mix(

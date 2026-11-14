@@ -14,7 +14,7 @@ for c in hyprctl waybar swaync swaync-client rofi wlogout wallust hyprpaper \
          gpu-screen-recorder swayimg jq notify-send powerprofilesctl pamixer \
          gnome-keyring-daemon hyprsunset swayosd-server ddcutil hyprpicker \
          qt6ct kvantummanager btop cava rice-gtk-reload rice-mode wall theme-apply \
-         rice-resume rice-keybinds rice-calculator rice-emoji qalc \
+         rice-resume rice-keybinds rice-calculator rice-emoji qalc rice-contrast \
          kde-theme dolphin-view-defaults telegram-theme; do
     command -v "$c" >/dev/null 2>&1 && ok "$c" || bad "$c missing"
 done
@@ -64,6 +64,7 @@ for f in "$HOME/.config/waybar/colors.css" \
          "$HOME/.cache/rice/Colors.qml" \
          "$HOME/.config/wlogout/colors.css" \
          "$HOME/.cache/rice/colors.env" \
+         "$HOME/.cache/rice/ansi-scheme" \
          "$HOME/.cache/rice/telegram.tdesktop-theme" \
          "$HOME/.local/share/rice/telegram-base.tdesktop-palette" \
          "$HOME/.config/kdeglobals" \
@@ -100,6 +101,7 @@ for helper in rice-keybinds rice-calculator rice-emoji; do
     [ -L "$HOME/.local/bin/$helper" ] && ok "~/.local/bin/$helper" || bad "~/.local/bin/$helper is not a symlink"
 done
 [ -L "$HOME/.local/bin/rice-mode" ] && ok "~/.local/bin/rice-mode" || bad "~/.local/bin/rice-mode is not a symlink"
+[ -L "$HOME/.local/bin/rice-contrast" ] && ok "~/.local/bin/rice-contrast" || bad "~/.local/bin/rice-contrast is not a symlink"
 
 echo "Wallpaper state:"
 if [ -L "$HOME/.cache/rice/wallpaper" ] && [ -f "$HOME/.cache/rice/wallpaper" ]; then
@@ -147,6 +149,17 @@ case "$effective_now" in
     light) [ "$kde_icon" = "Papirus" ] && ok "KDE icons Papirus" || bad "KDE icons=${kde_icon:-missing} for light" ;;
     dark)  [ "$kde_icon" = "Papirus-Dark" ] && ok "KDE icons Papirus-Dark" || bad "KDE icons=${kde_icon:-missing} for dark" ;;
 esac
+
+echo "Contrast:"
+if command -v rice-contrast >/dev/null 2>&1; then
+    if rice-contrast --check --quiet >/dev/null 2>&1; then
+        ok "palette meets the contrast policy"
+    else
+        bad "palette contrast check failed (run: rice-contrast --check)"
+    fi
+else
+    bad "rice-contrast missing"
+fi
 
 echo "Telegram:"
 if command -v telegram-theme >/dev/null 2>&1; then

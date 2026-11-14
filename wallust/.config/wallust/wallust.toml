@@ -1,3 +1,6 @@
+# This manifest is consumed by rice-contrast, which renders every entry with
+# the contrast-adjusted palette. theme-apply asks wallust for the base palette
+# through a minimal config so wallust never sees the semantic template keys.
 [templates]
 # Shell
 starship.template = 'starship-colors.toml'

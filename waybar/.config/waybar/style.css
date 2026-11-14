@@ -3,8 +3,8 @@
 /* Fixed semantic colors: accent follows the wallpaper, red does not */
 @define-color bg @background;
 @define-color fg @foreground;
-@define-color accent @color3;
-@define-color red #e06c75;
+@define-color accent @accent;
+@define-color red @danger;
 
 * {
     font-family: "JetBrainsMono Nerd Font";
@@ -123,7 +123,7 @@ button:hover {
 }
 
 #custom-mode.dark {
-    color: @color5;
+    color: @accent_alt;
 }
 
 #pulseaudio.muted {
@@ -143,16 +143,16 @@ button:hover {
 }
 
 #custom-seed4.connecting {
-    color: @color6;
+    color: @info;
 }
 
 #custom-seed4.connected {
-    color: #25e712;
+    color: @success;
 }
 
 #custom-seed4.cookie-expired,
 #custom-seed4.error {
-    color: #e06c75;
+    color: @danger;
 }
 
 #idle_inhibitor.deactivated {
@@ -189,7 +189,7 @@ button:hover {
 }
 
 #power-profiles-daemon.power-saver {
-    color: #25e712;
+    color: @success;
 }
 
 #custom-updates.has-updates {
@@ -245,7 +245,7 @@ tooltip label {
 }
 
 #network.disconnected {
-    color: @color5;
+    color: @accent_alt;
 }
 
 #custom-recorder.recording {

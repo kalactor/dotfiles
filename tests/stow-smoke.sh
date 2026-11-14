@@ -30,6 +30,7 @@ for path in \
     .local/bin/rice-keybinds \
     .local/bin/rice-calculator \
     .local/bin/rice-emoji \
+    .local/bin/rice-contrast \
     .local/share/rice/telegram-base.tdesktop-palette \
     .config/systemd/user/rice-sun.timer \
     .vimrc; do

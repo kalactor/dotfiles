@@ -558,7 +558,7 @@ notificationwindow, blankwindow {
 }
 .widget-title > button:hover {
   background: var(--noti-bg-hover);
-  border-color: @color3;
+  border-color: @accent;
 }
 .widget-dnd switch {
   background: var(--noti-bg);
@@ -566,8 +566,8 @@ notificationwindow, blankwindow {
   box-shadow: none;
 }
 .widget-dnd switch:checked {
-  background: @color3;
-  border-color: @color3;
+  background: @accent;
+  border-color: @accent;
 }
 .widget-dnd switch > slider {
   background: @foreground;
