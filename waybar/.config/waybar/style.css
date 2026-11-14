@@ -199,6 +199,13 @@ button:hover {
     color: @accent;
 }
 
+/* The date half of the clock keeps the normal bar text colour. */
+#clock.date {
+    color: @fg;
+    margin-left: -1px;
+    padding-left: 0;
+}
+
 .hidden {
     opacity: 0;
 }
