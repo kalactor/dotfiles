@@ -10,7 +10,7 @@ trap 'rm -rf "$target"' EXIT
 
 packages=(
     bash bin btop cava chrome dolphin fastfetch gtk hypr kitty mpv rice rofi
-    swayimg swaync telegram vim wallust waybar wlogout
+    swayimg swaync telegram vim wallust waybar wlogout zsh
 )
 
 for package in "${packages[@]}"; do
@@ -33,6 +33,8 @@ for path in \
     .local/bin/rice-contrast \
     .local/share/rice/telegram-base.tdesktop-palette \
     .config/systemd/user/rice-sun.timer \
+    .zshrc \
+    .zshenv \
     .vimrc; do
     if [ ! -e "$target/$path" ]; then
         printf 'stow-smoke: missing %s\n' "$path" >&2

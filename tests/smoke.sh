@@ -16,6 +16,11 @@ while IFS= read -r -d '' script; do
     esac
 done < <(find bin/.local/bin tests -maxdepth 1 -type f -print0)
 bash -n bash/.bashrc bash/.bash_profile tests/smoke.sh tests/stow-smoke.sh tests/failure-smoke.sh
+if command -v zsh >/dev/null 2>&1; then
+    for file in zsh/.zshenv zsh/.zshrc; do
+        zsh -n "$file"
+    done
+fi
 python3 -B - <<'PY'
 import ast
 from pathlib import Path

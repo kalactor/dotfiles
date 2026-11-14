@@ -6,6 +6,9 @@
 starship.template = 'starship-colors.toml'
 starship.target = '~/.config/starship.toml'
 
+zsh.template = 'zsh-colors.zsh'
+zsh.target = '~/.cache/rice/zsh-colors.zsh'
+
 waybar.template = 'waybar-colors.css'
 waybar.target = '~/.config/waybar/colors.css'
 
