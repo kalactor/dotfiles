@@ -49,6 +49,28 @@ if grep -RIn --exclude='colors.*' --exclude-dir='__pycache__' '/home/amit' \
 fi
 git diff --check
 
+# GTK cannot resolve a colour that aliases itself; every use of it silently
+# falls back to white.  Catch @define-color name @name before it ships.
+python3 -B - <<'PY'
+import re
+import sys
+from pathlib import Path
+
+pattern = re.compile(r'@define-color\s+([\w-]+)\s+@\1\b')
+bad = []
+for path in Path('.').rglob('*.css'):
+    if '__pycache__' in path.parts:
+        continue
+    for number, line in enumerate(path.read_text().splitlines(), 1):
+        if pattern.search(line):
+            bad.append(f'{path}:{number}: {line.strip()}')
+if bad:
+    print('smoke: self-referential @define-color alias found:', file=sys.stderr)
+    print('\n'.join(bad), file=sys.stderr)
+    raise SystemExit(1)
+print('CSS colour aliases: ok')
+PY
+
 if hyprctl monitors >/dev/null 2>&1; then
     printf '\n%s\n' '== Live Hyprland binding metadata =='
     "$ROOT/bin/.local/bin/rice-keybinds" --print >/dev/null

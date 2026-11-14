@@ -3,8 +3,6 @@
 /* Fixed semantic colors: accent follows the wallpaper, red does not */
 @define-color bg @bar_bg;
 @define-color fg @bar_fg;
-@define-color accent @accent;
-@define-color accent_fg @accent_fg;
 @define-color red @danger;
 
 * {
