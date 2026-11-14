@@ -10,6 +10,18 @@ setopt HIST_IGNORE_DUPS HIST_IGNORE_SPACE HIST_REDUCE_BLANKS
 setopt SHARE_HISTORY EXTENDED_HISTORY HIST_VERIFY
 setopt NO_BEEP INTERACTIVE_COMMENTS
 
+# zsh links "main" to the viins keymap whenever EDITOR/VISUAL contains "vi"
+# (ours are set to vim in .zshenv).  Force the emacs bindings bash used.
+bindkey -e
+
+# kitty sends ^H for Ctrl+Backspace and CSI 1;5D/C for Ctrl+Left/Right.
+bindkey '^H' backward-kill-word
+bindkey '^[[1;5D' backward-word
+bindkey '^[[1;5C' forward-word
+# Alt+arrows are unbound by default; use them for word movement too.
+bindkey '^[[1;3D' backward-word
+bindkey '^[[1;3C' forward-word
+
 # Completion
 zmodload zsh/complist
 autoload -Uz compinit
