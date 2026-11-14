@@ -12,12 +12,126 @@ Usage: kde-theme [light|dark]
 from __future__ import annotations
 
 import colorsys
+import os
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 HOME = Path.home()
 CACHE = HOME / ".cache" / "rice"
+
+
+def write_text_atomic(path: Path, text: str) -> None:
+    """Replace one generated file without exposing a partial write."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            stream.write(text)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.chmod(temporary, path.stat().st_mode & 0o777 if path.exists() else 0o644)
+        os.replace(temporary, path)
+    finally:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
+
+
+HEADER_RE = re.compile(r"^\s*(?:\[[^]]+\])+\s*$")
+KEY_RE = re.compile(r"^(\s*)([^=;#\s][^=]*?)(\s*)=")
+
+
+def merge_ini_sections(
+    existing: str, sections: dict[str, dict[str, str]]
+) -> str:
+    """Merge rice-owned keys while preserving every unrelated setting.
+
+    Only keys listed in ``sections`` are replaced. Unknown sections, keys,
+    comments, ordering and values survive every wallpaper change. KDE's
+    combined headers such as ``[Colors:Header][Inactive]`` are supported, and
+    duplicate copies of a generated section are collapsed without losing
+    unrecognised keys.
+    """
+    lines = existing.splitlines()
+
+    def headers() -> list[int]:
+        return [
+            index for index, line in enumerate(lines) if HEADER_RE.match(line)
+        ]
+
+    for section, values in sections.items():
+        header = f"[{section}]"
+        header_positions = headers()
+        starts = [
+            index for index in header_positions
+            if lines[index].strip() == header
+        ]
+
+        if not starts:
+            if lines and lines[-1].strip():
+                lines.append("")
+            lines.append(header)
+            lines.extend(f"{key}={value}" for key, value in values.items())
+            continue
+
+        start = starts[0]
+        end = next(
+            (index for index in header_positions if index > start), len(lines)
+        )
+
+        # Older generated files could append a combined-header section on every
+        # run. Keep any unknown keys from those copies, then remove duplicates.
+        extra: list[str] = []
+        duplicate_ranges: list[tuple[int, int]] = []
+        for duplicate_start in starts[1:]:
+            duplicate_end = next(
+                (
+                    index for index in header_positions
+                    if index > duplicate_start
+                ),
+                len(lines),
+            )
+            duplicate_ranges.append((duplicate_start, duplicate_end))
+            for line in lines[duplicate_start + 1 : duplicate_end]:
+                match = KEY_RE.match(line)
+                if match and match.group(2).strip() not in values:
+                    extra.append(line)
+
+        for duplicate_start, duplicate_end in reversed(duplicate_ranges):
+            del lines[duplicate_start:duplicate_end]
+
+        found: set[str] = set()
+        duplicate_owned_lines: list[int] = []
+        for index in range(start + 1, end):
+            match = KEY_RE.match(lines[index])
+            if not match:
+                continue
+            key = match.group(2).strip()
+            if key not in values:
+                continue
+            if key not in found:
+                lines[index] = f"{key}={values[key]}"
+                found.add(key)
+            else:
+                duplicate_owned_lines.append(index)
+
+        for index in reversed(duplicate_owned_lines):
+            del lines[index]
+            end -= 1
+
+        if extra:
+            lines[end:end] = extra
+            end += len(extra)
+        additions = [
+            f"{key}={value}" for key, value in values.items()
+            if key not in found
+        ]
+        lines[end:end] = additions
+
+    return "\n".join(lines).rstrip() + "\n"
 
 
 def hex_to_rgb(color: str) -> tuple[int, int, int]:
@@ -382,16 +496,9 @@ def write_kdeglobals(palette: dict[str, str], mode: str) -> None:
         },
     }
 
-    lines: list[str] = []
-    for section, values in sections.items():
-        lines.append(f"[{section}]")
-        for key, value in values.items():
-            lines.append(f"{key}={value}")
-        lines.append("")
-
     target = HOME / ".config" / "kdeglobals"
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text("\n".join(lines))
+    existing = target.read_text(encoding="utf-8") if target.exists() else ""
+    write_text_atomic(target, merge_ini_sections(existing, sections))
 
 
 def write_kvantum(palette: dict[str, str], mode: str) -> None:
@@ -438,19 +545,24 @@ def write_kvantum(palette: dict[str, str], mode: str) -> None:
     target_dir.mkdir(parents=True, exist_ok=True)
 
     config_text = (base_dir / f"{base_name}.kvconfig").read_text()
-    (target_dir / f"{theme_name}.kvconfig").write_text(
-        replace_general_colors(config_text, colors)
+    write_text_atomic(
+        target_dir / f"{theme_name}.kvconfig",
+        replace_general_colors(config_text, colors),
     )
 
     svg = (base_dir / f"{base_name}.svg").read_text()
     accent = base_accent(svg)
-    (target_dir / f"{theme_name}.svg").write_text(
-        recolor_svg(svg, palette, accent, mode)
+    write_text_atomic(
+        target_dir / f"{theme_name}.svg",
+        recolor_svg(svg, palette, accent, mode),
     )
 
     kv_config = HOME / ".config" / "Kvantum" / "kvantum.kvconfig"
-    kv_config.parent.mkdir(parents=True, exist_ok=True)
-    kv_config.write_text(f"[General]\ntheme={theme_name}\n")
+    existing = kv_config.read_text(encoding="utf-8") if kv_config.exists() else ""
+    write_text_atomic(
+        kv_config,
+        merge_ini_sections(existing, {"General": {"theme": theme_name}}),
+    )
 
 
 def main() -> None:

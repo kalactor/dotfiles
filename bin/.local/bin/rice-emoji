@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+"""Fuzzy-search the tracked emoji catalog with rofi and copy the selection."""
+
+from __future__ import annotations
+
+import subprocess
+import sys
+from pathlib import Path
+
+CATALOG = Path.home() / ".config" / "rofi" / "emoji.tsv"
+
+
+def entries() -> list[tuple[str, str, str]]:
+    rows = []
+    for line in CATALOG.read_text(encoding="utf-8").splitlines():
+        if not line or line.startswith("#"):
+            continue
+        emoji, name, keywords = line.split("\t", 2)
+        rows.append((emoji, name, keywords))
+    return rows
+
+
+def render_entries(rows: list[tuple[str, str, str]]) -> str:
+    return "\n".join(
+        f"{emoji}  {name}  ·  {keywords}" for emoji, name, keywords in rows
+    )
+
+
+def main() -> int:
+    try:
+        rows = entries()
+    except (OSError, ValueError) as error:
+        print(f"rice-emoji: cannot read {CATALOG}: {error}", file=sys.stderr)
+        return 1
+
+    text = render_entries(rows)
+    if "--list" in sys.argv[1:]:
+        print(text)
+        return 0
+
+    selected = subprocess.run(
+        [
+            "rofi", "-dmenu", "-i", "-p", "Emoji",
+            "-theme-str", "window { width: 46%; } listview { lines: 12; }",
+        ],
+        input=text,
+        capture_output=True,
+        text=True,
+    )
+    if selected.returncode != 0 or not selected.stdout.strip():
+        return 0
+
+    try:
+        index = next(
+            number for number, line in enumerate(text.splitlines())
+            if line == selected.stdout.rstrip("\n")
+        )
+        emoji, name, _ = rows[index]
+        subprocess.run(["wl-copy"], input=emoji, text=True, check=True)
+        subprocess.run(["notify-send", "Emoji copied", f"{emoji}  {name}"], check=False)
+    except (OSError, StopIteration, subprocess.SubprocessError) as error:
+        print(f"rice-emoji: {error}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

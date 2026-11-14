@@ -15,4 +15,6 @@ sudo cp system/etc/vconsole.conf /etc/vconsole.conf
 sudo mkinitcpio -P
 ```
 
-SDDM config will be added under `system/etc/sddm.conf.d/` once the theme is chosen.
+SDDM configuration is saved in `system/etc/sddm.conf.d/10-theme.conf`; the
+theme itself is below `system/sddm/`. See that directory's README for the sudo
+install/preview commands.

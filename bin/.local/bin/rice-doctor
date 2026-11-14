@@ -2,9 +2,11 @@
 # rice-doctor — is the desktop installed, generated and running?
 set -uo pipefail
 
+failures=0
+warnings=0
 ok()  { printf '  \033[32m✔\033[0m %s\n' "$1"; }
-bad() { printf '  \033[31m✘\033[0m %s\n' "$1"; }
-warn(){ printf '  \033[33m•\033[0m %s\n' "$1"; }
+bad() { failures=$((failures + 1)); printf '  \033[31m✘\033[0m %s\n' "$1"; }
+warn(){ warnings=$((warnings + 1)); printf '  \033[33m•\033[0m %s\n' "$1"; }
 
 echo "Commands:"
 for c in hyprctl waybar swaync swaync-client rofi wlogout wallust hyprpaper \
@@ -12,6 +14,7 @@ for c in hyprctl waybar swaync swaync-client rofi wlogout wallust hyprpaper \
          gpu-screen-recorder swayimg jq notify-send powerprofilesctl pamixer \
          gnome-keyring-daemon hyprsunset swayosd-server ddcutil hyprpicker \
          qt6ct kvantummanager btop cava rice-gtk-reload rice-mode wall theme-apply \
+         rice-resume rice-keybinds rice-calculator rice-emoji qalc \
          kde-theme dolphin-view-defaults telegram-theme; do
     command -v "$c" >/dev/null 2>&1 && ok "$c" || bad "$c missing"
 done
@@ -46,6 +49,7 @@ fi
 
 echo "Generated theme files:"
 for f in "$HOME/.config/waybar/colors.css" \
+         "$HOME/.config/swayimg/colors.lua" \
          "$HOME/.config/swaync/colors.css" \
          "$HOME/.config/hypr/colors.lua" \
          "$HOME/.config/hypr/hyprlock-colors.conf" \
@@ -91,6 +95,10 @@ done
 [ -L "$HOME/.local/share/rice/telegram-base.tdesktop-palette" ] && ok "~/.local/share/rice/telegram-base.tdesktop-palette" || bad "telegram base palette is not a symlink"
 [ -L "$HOME/.config/systemd/user/rice-sun.service" ] && ok "~/.config/systemd/user/rice-sun.service" || bad "rice-sun.service is not a symlink"
 [ -L "$HOME/.config/systemd/user/rice-sun.timer" ] && ok "~/.config/systemd/user/rice-sun.timer" || bad "rice-sun.timer is not a symlink"
+[ -L "$HOME/.local/bin/rice-resume" ] && ok "~/.local/bin/rice-resume" || bad "~/.local/bin/rice-resume is not a symlink"
+for helper in rice-keybinds rice-calculator rice-emoji; do
+    [ -L "$HOME/.local/bin/$helper" ] && ok "~/.local/bin/$helper" || bad "~/.local/bin/$helper is not a symlink"
+done
 [ -L "$HOME/.local/bin/rice-mode" ] && ok "~/.local/bin/rice-mode" || bad "~/.local/bin/rice-mode is not a symlink"
 
 echo "Wallpaper state:"
@@ -150,3 +158,10 @@ if command -v telegram-theme >/dev/null 2>&1; then
 else
     bad "telegram-theme missing"
 fi
+
+if pgrep -x waybar >/dev/null 2>&1 && ! command -v seed4 >/dev/null 2>&1; then
+    warn "optional Seed4 Waybar module is unavailable (external integration)"
+fi
+
+printf '\nSummary: %d failure(s), %d warning(s)\n' "$failures" "$warnings"
+(( failures == 0 ))

@@ -10,6 +10,16 @@
 - `[ ]` = to do (if it says *(provided, verify)* the config exists, but it is not confirmed yet)
 - Package names: check with `pacman -Ss <name>`; if not found, try the AUR (`paru -S` / `yay -S`).
 
+> **Current status, 2026-11-14:** core rice, SDDM, wallust, sunrise/sunset,
+> Dolphin/KDE/Kvantum, wlogout and Telegram are complete. The reliability,
+> modularization and restoration milestones are now also implemented: failures
+> propagate, `rice-doctor` has exit codes, `rice-resume` repairs Waybar after
+> sleep, Hyprland is split into modules, and `./tests/smoke.sh` runs fixture
+> tests plus a fresh-profile Stow restore. Rofi includes a live keybind sheet,
+> calculator and emoji picker. Workspaces remain strictly numeric (`1-10`).
+> The system snapshot and research below are the historical starting point;
+> phase checkboxes and section 11 are the current roadmap.
+
 ---
 
 ## 0. How to use this file
@@ -32,8 +42,8 @@
 | CPU / RAM / GPU | Intel i5-9400F (6 cores), 15.55 GiB RAM, NVIDIA GTX 1660 6 GB (`nvidia-open 615.78.08`), `nvidia_drm.modeset=Y`, `nvidia-smi` works |
 | Disk / boot | ext4 on `/dev/nvme0n1p2`, 456 GiB total; systemd-boot; Secure Boot enabled |
 | Packages | 1017 total; 123 explicitly installed native; 14 AUR (including `yay`, `wallust`, `wlogout`, `wttrbar`, `google-chrome`) |
-| Login | **SDDM 0.21.0** enabled + active; X11 greeter (`Xorg`), **no theme configured**; starts **Hyprland 0.57.2** via `/usr/bin/start-hyprland` (no UWSM) |
-| Session | Hyprland 0.57.2 Wayland session on tty1; `hyprctl configerrors` is clean; 65 keybinds loaded |
+| Login | **SDDM 0.21.0** enabled + active; X11 greeter (`Xorg`); baseline snapshot had no theme (the custom `rice` theme was installed later) |
+| Session | Hyprland 0.57.2 Wayland session on tty1; `hyprctl configerrors` is clean; 72 described keybinds loaded |
 | Monitors | `DP-3` 1920x1080@165 at `0x0` (primary/focused); `HDMI-A-1` 1920x1080@60 at `0x-1080`; Waybar reserves 38 px at the top of `DP-3` only |
 | Running | waybar, swaync, hyprpaper, hypridle, nm-applet, hyprpolkitagent, xdg-desktop-portal-hyprland, swayosd-server, Telegram, PipeWire/WirePlumber, NetworkManager, Bluetooth, CUPS, gnome-keyring |
 | Not running | `udiskie` (installed, not started), `hyprlock` (idle, expected) |
@@ -51,7 +61,7 @@
 
 - Hyprland Lua config loads with no errors; monitors are positioned correctly; numlock is on; float rules for Satty/swayimg/pavucontrol/Blueman work.
 - Screenshots (grim + slurp + Satty), screen recording (gpu-screen-recorder + Waybar indicator), wallpaper script, Waybar, SwayNC, hyprpaper and hypridle are running.
-- wallust generates 13 targets from one wallpaper: Waybar, SwayNC, Hyprland, hyprlock, kitty, rofi, GTK 3/4, vim, wlogout, starship, btop, cava, SDDM.
+- wallust generates 16 targets from one wallpaper: Waybar, SwayNC, Hyprland, hyprlock, kitty, rofi, GTK 3/4, vim, wlogout, starship, btop, cava, SDDM, swayimg, and machine-readable palette files.
 - Audio (PipeWire/WirePlumber), NetworkManager, Bluetooth, CUPS, zram swap, timezone/NTP and GNOME keyring PAM unlock work.
 - vim is the default text editor; kitty is the terminal; SDDM successfully starts Hyprland.
 
@@ -66,15 +76,15 @@
 | 5 | **Dead Lua rules** | **Resolved:** replaced with `hl.layer_rule` (rofi, swaync, wlogout blur) | Done |
 | 6 | **`Super+M` exit is broken** | **Resolved:** bound to `hyprshutdown` | Done |
 | 7 | **Keybind map differs from the old plan** | **Resolved:** lock `Super+L`, power `Super+Backspace`, DND `Super+Shift+N`, clipboard `Super+Shift+V`, picker `Super+Shift+C` | Done |
-| 8 | **Theming is only partial** | **Resolved:** 9 wallust targets + `theme-apply`; Hyprland, Waybar, SwayNC, rofi, kitty, hyprlock, GTK, vim, wlogout recolored; Qt fixed via Kvantum | SDDM remains |
+| 8 | **Theming was only partial** | **Resolved:** wallust + `theme-apply` now cover shell, apps, Qt/KDE, SDDM, swayimg and Telegram | Done |
 | 9 | **Semantic red is dynamic** | **Resolved:** `@red = #e06c75`, `@accent = @color3` | Done |
 | 10 | **No dotfiles safety net** | **Resolved 2026-11-12:** `~/dotfiles` is a git repo; configs are stowed; package lists and `system/etc/` copies saved | Phase 0 done |
 | 11 | **Missing utilities** | **Mostly resolved:** `cliphist`, `hyprpicker`, `hyprsunset`, `swayosd`, `ddcutil`, `qt6ct`, `kvantum`, `papirus-icon-theme`, `noto-fonts-cjk`, `hyprshutdown`, `fzf`, `zoxide`, `eza`, `bat`, `btop`, `cava`, `nwg-look` installed. Still optional: `waybar-module-pacman-updates` | Optional polish |
-| 12 | **SDDM is unthemed** | No `/etc/sddm.conf` or `/etc/sddm.conf.d`; log says "Loaded empty theme configuration"; X11 greeter; only `elarun`, `maldives`, `maya` themes installed; `weston` absent | Choose a theme; keep X11 greeter or install `weston` for a Wayland greeter |
-| 13 | **GTK/Qt/fonts are not unified** | **Resolved:** Adwaita-dark + Papirus-Dark + Inter; gsettings and `settings.ini` set; Qt uses qt6ct + Kvantum `KvArcDark`; kitty switched to JetBrainsMono | Done |
+| 12 | **SDDM was unthemed** | **Resolved 2026-11-13:** custom `rice` theme installed and palette/wallpaper synchronized | Done |
+| 13 | **GTK/Qt/fonts are not unified** | **Resolved:** Adwaita + Papirus light/dark variants + Inter; gsettings and `settings.ini` set; Qt uses qt6ct + generated Kvantum `WallustFlat`; kitty uses JetBrainsMono | Done |
 | 14 | **Workspace/monitor rules are incomplete** | **Resolved:** 1-5 -> `DP-3`, 6-10 -> `HDMI-A-1`; `DP-3` runs 1920x1080@165 | Done |
 | 15 | **Idle/suspend behavior needs a decision** | hypridle locks at 5 min, DPMS off at 5.5 min, suspends at 30 min; NVIDIA suspend/resume units are disabled | Decide desktop suspend; enable NVIDIA services if keeping it |
-| 16 | **Some configs are missing** | **Partly resolved:** `~/.config/user-dirs.dirs` and `~/.vimrc` exist. Still missing: `starship.toml`, `mpv.conf`, `chrome-flags.conf` | Optional Phase 5 |
+| 16 | **Some configs were missing** | **Resolved:** `user-dirs.dirs`, `.vimrc`, generated `starship.toml`, `mpv.conf`, `chrome-flags.conf` and the modular Hyprland config all exist | Done |
 | 17 | **SwayNC CSS import is suspect** | **Resolved:** `@import "colors.css";` fixed; dedicated template defines every var; buttons/switches themed | Done |
 | 18 | **swayimg `w` does not recolor** | **Resolved:** `init.lua` calls `$HOME/.local/bin/wall set <path>` | Done |
 
@@ -212,7 +222,7 @@ require("autostart")
 
 ### Phase 1: Hyprland core (Lua)
 - [x] Hyprland running on the Lua config (`hyprland.lua`, 0.57.2)
-- [ ] Config split into modules (`env`, `monitors`, `input`, `look`, `rules`, `binds`, `autostart`) — currently one **456-line** file
+- [x] Config split into modules (`env`, `monitors`, `input`, `look`, `rules`, `binds`, `autostart`)
 - [x] Lua autocomplete: `~/.config/hypr/.luarc.json` points to `/usr/share/hypr/stubs` with `globals: ["hl"]`
 - [x] How Hyprland starts decided: **SDDM** -> `/usr/bin/start-hyprland` (UWSM not installed; `hyprland-uwsm.desktop` unused)
 - [x] Environment: `XCURSOR_SIZE`/`HYPRCURSOR_SIZE`/`XCURSOR_THEME` set; NVIDIA (`LIBVA_DRIVER_NAME`, `__GLX_VENDOR_LIBRARY_NAME`, `NVD_BACKEND`, `GBM_BACKEND`) and Qt (`QT_QPA_PLATFORMTHEME=qt6ct`, `QT_STYLE_OVERRIDE=kvantum`) vars added
@@ -224,7 +234,7 @@ require("autostart")
 - [x] Float rule for utility windows (`satty`, `swayimg`, `pavucontrol`, `blueman-manager`, `nm-connection-editor`); text editor not included
 - [~] Window rules: suppress-maximize, XWayland fix, hyprland-run, float apps; no per-app opacity/workspace/no-blur/no-shadow
 - [x] Layer rules: replaced the dead globals with `hl.layer_rule` (rofi, swaync, wlogout blur)
-- [~] Keybind module: 65 binds in one file; `Super+M` fixed to `hyprshutdown`; clipboard, color picker, night light and OSD binds added; not split
+- [x] Keybind module: `binds.lua`; every bind includes a description consumed live by `rice-keybinds`; workspace bindings stay numeric
 - [x] Safety habit: `hyprctl configerrors` clean after each change; known-good tags created
 - [x] `known-good` git tags of the config
 
@@ -245,7 +255,7 @@ require("autostart")
 - [~] File manager extras: **Dolphin** (not Thunar) + `dolphin-plugins`, `gvfs`, `kio-extras`, `ark` installed; `tumbler`/`thunar-volman` not needed
 - [x] XDG user dirs + default apps: `xdg-user-dirs` installed and configured; `mimeapps.list` sets Chrome, vim, swayimg, mpv
 - [x] Printing: CUPS active + enabled (if needed)
-- [ ] NVIDIA suspend/resume services if you keep suspend: `nvidia-suspend`, `nvidia-resume` are disabled; `hypridle` suspends at 30 min
+- [x] Desktop suspend/resume repair: `hypridle` runs `rice-resume`, restoring the palette/wallpaper and checking Waybar's `DP-3` layer; optional NVIDIA driver suspend services remain a separate system decision
 - [x] Autostart order check: dbus env + `reset-failed`/`start` for portals and polkit now run after Hyprland is up
 
 ### Phase 3: Desktop shell components
@@ -254,7 +264,7 @@ require("autostart")
 - [x] Omarchy leftovers removed (2026-11-12): dead `custom/voxtype`, `custom/idle-indicator`, `custom/notification-silencing-indicator`, `custom/screenrecording-indicator` and unused `custom/update` deleted; `battery`/`backlight` dropped (desktop); `custom/updatespacman` replaced by `custom/updates` using `checkupdates`; separators renamed to `custom/sep` / `custom/sep-dot`; no `omarchy` or `$OMARCHY_PATH` references remain
 - [x] **Waybar only on `DP-3`** (locked): `config.jsonc` has `"output": "DP-3"`; do not run a bar on `HDMI-A-1`
 - [x] `colors.css` import and `@define-color`; **but** `@red` is mapped to `@color3` (dynamic), not fixed
-- [ ] Waybar start/reload handled by one script (`pkill -SIGUSR2 waybar`)
+- [x] Waybar start/reload handled by `theme-apply` (`SIGUSR2`) and `rice-resume` (layer recreation when needed)
 
 **Notifications: SwayNC**
 - [x] SwayNC is the notification daemon (running)
@@ -268,8 +278,8 @@ require("autostart")
 - [x] Wallpaper picker with thumbnails (`wall pick`)
 - [~] Power menu: **wlogout** is installed and bound to `Super+Backspace`; the planned rofi `power-menu` is not implemented (keep wlogout or switch)
 - [x] Clipboard picker (`Super+Shift+V` -> `rice-clipboard`)
-- [ ] Emoji / calculator modes
-- [ ] Keybind cheat sheet in rofi (generate from `binds.lua`)
+- [x] Calculator mode (`Super+Ctrl+C`, qalc) and emoji mode (`Super+Ctrl+E`)
+- [x] Live keybind cheat sheet in rofi (`Super+F1`, reads `hyprctl binds -j`)
 
 **Wallpaper**
 - [x] hyprpaper running; `wall` script supports next / prev / random / set / pick
@@ -294,8 +304,8 @@ require("autostart")
 ### Phase 4: Theming engine (color *every* aspect)
 **Engine**
 - [x] `wallust` installed (3.5.2, AUR)
-- [x] Templates: 13 targets — Waybar, SwayNC, Hyprland, hyprlock, kitty, rofi, GTK 3/4, vim, wlogout, starship, btop, cava, SDDM
-- [x] `~/.config/wallust/wallust.toml` has 13 targets
+- [x] Templates: 16 targets — shell, UI, editor, terminal, image viewer, login, TUI and machine-readable palette files
+- [x] `~/.config/wallust/wallust.toml` has 16 targets
 - [x] `theme-apply` created and **`wall` calls it** (absolute path, works with Hyprland's PATH)
 - [x] Hooks folder `~/.config/rice/hooks/theme-set.d/` created and stowed
 - [x] First run: `wallust run <image>` has generated every target
@@ -306,7 +316,7 @@ require("autostart")
 - [x] GTK base theme + dark mode: `Adwaita-dark`, `prefer-dark`, gsettings + `settings.ini`
 - [x] Icon theme: `Papirus-Dark`
 - [x] Cursor theme + size: Adwaita, size 24 (Hyprland + gsettings)
-- [x] Qt apps: `qt6ct` + Kvantum `KvArcDark`; `QT_QPA_PLATFORMTHEME=qt6ct`
+- [x] Qt apps: `qt6ct` + generated wallpaper-driven Kvantum `WallustFlat`; `QT_QPA_PLATFORMTHEME=qt6ct`
 - [x] UI/monospace fonts: JetBrainsMono Nerd Font (kitty, Waybar, rofi, hyprlock), Inter (GTK), Noto CJK installed
 - [x] Hyprland look: `border_size = 2`, gradient borders from wallust, rounding/gaps/blur/shadows/animations
 - [~] Per-app opacity: only global active 0.90 / inactive 0.85; no per-app values
@@ -328,13 +338,13 @@ require("autostart")
 - [x] Media player: `mpv` configured (`gpu-next`, `hwdec=auto-safe`, high-quality profile, resume)
 - [x] Archive tool (`ark`), image viewer (`swayimg`), screenshot annotator (Satty)
 - [~] Password manager, office suite, torrent client, VPN as needed: seed4 VPN scripts installed; no password manager/office/torrent; optional
-- [ ] Flatpak decision (`flatpak` not installed; portals mostly working after fix)
+- [x] Flatpak decision: `flatpak` installed for applications that need it; portals are working
 
 ### Phase 6: Polish
-- [~] Animations: defaults in `hyprland.lua`; not tuned
-- [~] Blur/shadow: enabled; NVIDIA performance not profiled
+- [x] Animations/blur/shadow: reviewed for GTX 1660 + 165 Hz; retained one-pass, size-3 blur and range-4 shadows to avoid unnecessary GPU work
+- [x] Blur/shadow: lightweight settings preserved in modular `look.lua`
 - [x] Special workspace / scratchpad (`Super+S`, `Super+Shift+S`)
-- [~] Workspace names/icons in Waybar: numeric 1-10 icons; no names
+- [x] Workspaces: strictly numeric 1-10; 1-5 on `DP-3`, 6-10 on `HDMI-A-1` (user preference locked)
 - [ ] Monitor profiles for plugging/unplugging (`kanshi` not installed)
 - [ ] Optional plugins via `hyprpm` (not used)
 - [ ] Optional: sounds for notifications and volume
@@ -344,7 +354,7 @@ require("autostart")
 - [x] `rice-doctor` health-check script installed (commands, services, generated files, Waybar outputs, config errors)
 - [ ] Weekly routine: read Arch news, update, `hyprctl configerrors`, reboot test
 - [x] One git commit per change; `known-good` tags created
-- [ ] Restore test: re-stow on a fresh user or VM
+- [x] Restore test: `tests/stow-smoke.sh` restores all 20 Stow packages plus systemd into an isolated HOME and checks numeric workspaces
 - [x] Keybind cheat sheet and checklist in `~/dotfiles/README.md`
 - [x] Recovery notes: TTY access, `hyprctl reload`, `hl.clear_crashed_lockscreen()`, git rollback
 
@@ -366,13 +376,13 @@ Every row should end up driven by the wallpaper (✅ target) or deliberately fix
 | Shell prompt (starship) | generated palette file or fixed palette | [x] wallust-generated `starship.toml` |
 | btop / cava / fastfetch | template into their theme/config files | [x] btop + cava generated by wallust; fastfetch static |
 | GTK 3 / 4 apps (Dolphin, ...) | template → `~/.config/gtk-3.0/gtk.css`, `gtk-4.0/gtk.css` | [x] generated + Adwaita-dark/Papirus; common settings apps restarted by `rice-gtk-reload` |
-| Qt apps | `qt6ct` color scheme from a template, or a fixed Kvantum theme | [x] qt6ct + Kvantum KvArcDark |
-| swayimg | `colors.lua` generated and loaded from `init.lua`, or fixed colors | [x] `w` calls `wall set` |
+| Qt apps | `qt6ct` + wallpaper-driven `kde-theme` generator | [x] generated Kvantum WallustFlat + merged kdeglobals |
+| swayimg | wallust template → `~/.config/swayimg/colors.lua`, loaded on next open | [x] generated; `w` calls `wall set` |
 | Editor (**vim**) | generated vim colorscheme or a fixed theme | [x] generated wallust colorscheme |
 | Browser | manual theme color / dark mode | [x] Chrome Wayland + keyring flags |
 | Cursor and icons | fixed | [x] Adwaita cursor, Papirus-Dark |
 | Fonts | fixed | [x] JetBrainsMono + Inter + Noto CJK |
-| **SDDM login screen** | theme + wallpaper/colors | [ ] no theme configured; handoff in `system/sddm/README.md` |
+| **SDDM login screen** | theme + wallpaper/colors | [x] custom `rice` theme configured; palette/wallpaper synced when writable |
 | Plymouth / bootloader | fixed theme or wallpaper sync (optional) | [ ] Plymouth not installed; systemd-boot |
 | Fixed semantic colors | `@red` for muted/errors stays red in every theme | [x] `@red = #e06c75`; `@accent = @color3` |
 
@@ -401,10 +411,13 @@ and in `look.lua`: `local ok, c = pcall(require, "colors")` then build `"rgba(" 
 | `rice-doctor` | health check | [x] installed and green |
 | `rice-restart` | restart waybar + swaync + hyprpaper cleanly | [x] installed |
 | `rice-clipboard` | rofi clipboard history (`cliphist`) | [x] installed |
-| `keybinds` | rofi cheat sheet from `binds.lua` | [ ] missing |
+| `keybinds` / `rice-keybinds` | live rofi cheat sheet from `hyprctl binds -j` | [x] working; descriptions registered in `binds.lua` |
+| `rice-resume` | restore wallpaper/theme and repair Waybar after login/sleep | [x] working; used by `hypridle` |
+| `rice-calculator` | rofi + qalc; copies result | [x] working; unit tested |
+| `rice-emoji` | rofi emoji picker backed by tracked catalog | [x] working; copies selection |
 | `screenshot-*` | currently inline in `binds.lua`; optionally move into scripts | [~] 4 binds work inline |
 
-> Current `~/.local/bin`: `wall`, `theme-apply`, `rice-brightness`, `rice-nightlight`, `rice-clipboard`, `rice-doctor`, `rice-restart`, `gsr-status`, `gsr-toggle`, plus unrelated `airctl`, `android`, `seed4`, `directionallylocal`. `power-menu` and `keybinds` do not exist (wlogout covers the power menu).
+> Current `~/.local/bin`: the tracked scripts above plus `rice-mode`, `kde-theme`, `telegram-theme`, `dolphin-view-defaults`, `rice-brightness`, `rice-nightlight`, `rice-clipboard`, `rice-doctor`, `rice-restart`, `gsr-status`, `gsr-toggle`, `wlogout` covers the power menu. External personal integrations such as `seed4` are optional and not part of a fresh baseline install.
 
 ### `theme-apply` (the single "recolor everything" command)
 ```bash
@@ -483,7 +496,7 @@ systemctl --user is-failed hyprpolkitagent xdg-desktop-portal-hyprland 2>/dev/nu
 | `Super+A` | rofi app launcher | binds |
 | `Super+C` | Google Chrome | binds |
 | `Super+Q` | Close window | binds |
-| `Super+M` | Exit Hyprland (`hyprshutdown` missing → **broken**) | binds |
+| `Super+M` | Exit Hyprland (`hyprshutdown`) | binds |
 | `Super+V` / `Super+P` / `Super+J` | Float / pseudo / toggle split | binds |
 | `Super+S` / `Super+Shift+S` | Scratchpad / move window to scratchpad | binds |
 | `Super+arrows`, `Super+1..0`, `Super+Shift+1..0` | Focus, workspaces, move window | binds |
@@ -492,7 +505,10 @@ systemctl --user is-failed hyprpolkitagent xdg-desktop-portal-hyprland 2>/dev/nu
 | *(to add)* | Clipboard history, color picker, night light, keybind cheat sheet, DND | binds |
 | `Super+Q`, `Super+R`, `Super+M` | **Emergency binds** Hyprland adds when the Lua config has a major error | built in |
 
-> The old plan's `Super+Escape` power menu and `Super+Shift+L` lock do **not** exist. Actual: `Super+Backspace` (wlogout) and `Super+L`. `Super+Shift+N` DND is not bound yet. In a normal config `Super+Q` closes the window and `Super+M` exits; the emergency binds only appear when the Lua config fails to load.
+> Power is `Super+Backspace` (wlogout), lock is `Super+L`, and DND is
+> `Super+Shift+N`. `Super+F1` opens the live keybind sheet, `Super+Ctrl+C` the
+> calculator, and `Super+Ctrl+E` the emoji picker. See `binds.lua` for the
+> current source of truth; emergency binds only appear after a major Lua error.
 
 ---
 
@@ -633,12 +649,22 @@ Add generated files and secrets to `.gitignore` before the first commit. If you 
 
 ---
 
-## 11. Suggested order for the next sessions
+## 11. Current maintenance path
 
-1. **Phase 0**: git + stow + PATH fix (rename `wall` to `rice-wall` or move `~/.local/bin` before `/usr/bin`), package lists, backup target.
-2. **Fix the session plumbing first**: `systemctl --user reset-failed` + start `hyprpolkitagent` and `xdg-desktop-portal-hyprland` **after** Hyprland is up; test screen sharing and polkit prompts. Keyring is already working.
-3. **Phase 1 cleanup**: split `hyprland.lua` into modules; replace the dead `layerrule`/`windowrule` globals with `hl.layer_rule`/`hl.window_rule`; fix `Super+M`; add NVIDIA/Qt env; decide workspace 1-5/6-10 rules and the 165 Hz mode.
-4. **Phase 4 engine**: add wallust templates for Hyprland, rofi, kitty, hyprlock, GTK, vim; write `theme-apply`; make `wall` call it; disable hyprpaper self-rotation.
-5. **Clean the shell**: remove Omarchy leftovers from Waybar, add SwayNC DND, theme rofi, choose and configure the SDDM theme.
-6. **Phase 2/3 gaps**: `cliphist`, `ddcutil`, `swayosd`, `udiskie`, `hyprpicker`/`hyprsunset`, keybind cheat sheet, `rice-doctor`.
-7. Then Phase 5-7 and every row in section 4 until all are ticked.
+The original phased build is complete. Keep the rice healthy with small,
+testable changes rather than installing another shell or upstream dotfiles
+project:
+
+1. Run `./tests/smoke.sh` after script/config changes; use
+   `RICE_LIVE_CHECKS=1 ./tests/smoke.sh` for the live health gate too.
+2. Keep wallpaper-driven generation non-destructive. KDE merging preserves
+   unknown user settings; generated files stay gitignored.
+3. After suspend/login, `rice-resume` must leave Waybar on `DP-3` only and the
+   current numeric workspace assignments unchanged.
+4. Add future targets through wallust/templates or a small helper invoked by
+   `theme-apply`, with fixture coverage and a clear success/failure result.
+5. Optional ideas only when actually wanted: monitor hotplug profiles,
+   removable-drive automounting (`udiskie`), timed wallpaper rotation, a
+   dedicated PDF reader, and semantic-color refinements. Browser theming stays
+   deferred; numeric workspaces and no Quickshell are locked decisions.
+6. Commit tested milestones and create known-good tags after verification.

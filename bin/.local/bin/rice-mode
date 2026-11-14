@@ -420,7 +420,7 @@ def set_mode(
     apply: bool = True,
     force: bool = False,
     quiet: bool = False,
-) -> tuple[str, dict[str, Any]]:
+) -> tuple[str, dict[str, Any], int]:
     ensure_cache()
     old_effective = read_effective()
     write_text(MODE_FILE, mode + "\n")
@@ -432,12 +432,17 @@ def set_mode(
     write_text(EFFECTIVE_FILE, effective + "\n")
     log(f"mode={mode} effective={effective} apply={apply} force={force}")
 
+    status = 0
     if apply:
         if old_effective == effective and not force:
-            run_wall(["ensure-mode", effective], quiet=quiet)
+            status = run_wall(["ensure-mode", effective], quiet=quiet)
         else:
-            run_wall(["apply-mode", effective], quiet=quiet)
-    return effective, info
+            status = run_wall(["apply-mode", effective], quiet=quiet)
+    return effective, info, status
+
+
+def cmd_set_mode(args: argparse.Namespace, mode: str) -> int:
+    return set_mode(mode, apply=not args.no_apply)[2]
 
 
 def cmd_tick(args: argparse.Namespace) -> int:
@@ -450,24 +455,25 @@ def cmd_tick(args: argparse.Namespace) -> int:
         write_text(LOCATION_FILE, format_location(lat, lon) + "\n")
     write_text(EFFECTIVE_FILE, effective + "\n")
 
+    result = 0
     if old_effective != effective:
         log(f"tick: {old_effective or 'unset'} -> {effective} (mode={mode})")
-        run_wall(["apply-mode", effective], quiet=True)
+        result = run_wall(["apply-mode", effective], quiet=True)
     else:
-        run_wall(["ensure-mode", effective], quiet=True)
+        result = run_wall(["ensure-mode", effective], quiet=True)
 
     if getattr(args, "verbose", False):
         print(
             f"mode={mode} effective={effective} "
             f"sunrise={fmt_dt(info['sunrise'])} sunset={fmt_dt(info['sunset'])}"
         )
-    return 0
+    return result
 
 
 def cmd_resume(args: argparse.Namespace) -> int:
-    effective, _ = set_mode(read_mode(), apply=True, force=True, quiet=True)
-    log(f"resume: effective={effective}")
-    return 0
+    effective, _, result = set_mode(read_mode(), apply=True, force=True, quiet=True)
+    log(f"resume: effective={effective} status={result}")
+    return result
 
 
 def cmd_current(args: argparse.Namespace) -> int:
@@ -479,8 +485,7 @@ def cmd_toggle(args: argparse.Namespace) -> int:
     mode = read_mode()
     effective, _ = compute_effective(mode)
     new_mode = "dark" if effective == "light" else "light"
-    set_mode(new_mode, apply=not args.no_apply)
-    return 0
+    return set_mode(new_mode, apply=not args.no_apply)[2]
 
 
 def cmd_location(args: argparse.Namespace) -> int:
@@ -511,7 +516,7 @@ def cmd_location(args: argparse.Namespace) -> int:
     log(f"location={format_location(lat, lon)}")
     print(format_location(lat, lon))
     if not args.no_apply:
-        set_mode(read_mode(), apply=True, quiet=False)
+        return set_mode(read_mode(), apply=True, quiet=False)[2]
     return 0
 
 
@@ -534,7 +539,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     for name in ("auto", "light", "dark"):
         p = sub.add_parser(name, help=f"switch to {name} mode")
-        p.set_defaults(func=lambda args, n=name: set_mode(n, apply=not args.no_apply))
+        p.set_defaults(func=lambda args, n=name: cmd_set_mode(args, n))
 
     p_toggle = sub.add_parser("toggle", help="switch to the opposite manual mode")
     p_toggle.set_defaults(func=cmd_toggle)

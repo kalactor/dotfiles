@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+"""Small rofi front end for qalculate. --evaluate EXPR is UI-free for tests."""
+
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+
+
+def evaluate(expression: str) -> str:
+    env = dict(os.environ, NO_COLOR="1")
+    result = subprocess.run(
+        ["qalc", "-t", expression],
+        text=True,
+        capture_output=True,
+        timeout=10,
+        env=env,
+    )
+    output = result.stdout.strip()
+    if result.returncode != 0 or not output:
+        detail = result.stderr.strip() or output or "invalid expression"
+        raise ValueError(detail)
+    return output.splitlines()[-1].strip()
+
+
+def main() -> int:
+    arguments = sys.argv[1:]
+    if arguments[:1] == ["--evaluate"]:
+        if len(arguments) != 2:
+            print("usage: rice-calculator --evaluate EXPR", file=sys.stderr)
+            return 2
+        try:
+            print(evaluate(arguments[1]))
+        except (OSError, ValueError, subprocess.SubprocessError) as error:
+            print(f"rice-calculator: {error}", file=sys.stderr)
+            return 1
+        return 0
+
+    expression = subprocess.run(
+        [
+            "rofi",
+            "-dmenu",
+            "-p",
+            "Calculate",
+            "-theme-str",
+            'entry { placeholder: "Example: 0.18 * 2400 or sqrt(81) + 5"; }',
+        ],
+        capture_output=True,
+        text=True,
+    )
+    expression_text = expression.stdout.strip()
+    if expression.returncode != 0 or not expression_text:
+        return 0
+
+    try:
+        result = evaluate(expression_text)
+        answer = result.rsplit(" = ", 1)[-1].removeprefix("approximately ")
+        subprocess.run(["wl-copy"], input=answer, text=True, check=True)
+        subprocess.run(["notify-send", "Calculator", f"{result}\nCopied: {answer}"], check=False)
+        subprocess.run(["rofi", "-e", f"{result}\n\nResult copied to clipboard"], check=False)
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        subprocess.run(["notify-send", "-u", "critical", "Calculator", str(error)], check=False)
+        subprocess.run(["rofi", "-e", f"Calculation failed: {error}"], check=False)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

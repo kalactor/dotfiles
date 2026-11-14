@@ -22,6 +22,12 @@ mkdir -p "$HOME/.cache/rice"
 exec 9>"$HOME/.cache/rice/theme.lock"
 flock -w 60 9 || { notify-send -u critical "theme-apply" "Timed out waiting for theme lock"; exit 1; }
 
+failures=()
+record_failure() {
+    failures+=("$1")
+    printf 'theme-apply: %s\n' "$1" >&2
+}
+
 # 1. Generate every target listed in wallust.toml
 if ! wallust run --palette "$mode" "$img" >/dev/null 2>&1; then
   notify-send -u critical "theme-apply" "wallust failed for $img ($mode)"
@@ -47,15 +53,17 @@ fi
 
 # 2. GTK 3/4 follow gsettings on Wayland (settings.ini is ignored there).
 if command -v gsettings >/dev/null 2>&1; then
+  gtk_failed=0
   if [ "$mode" = "light" ]; then
-    gsettings set org.gnome.desktop.interface gtk-theme Adwaita 2>/dev/null || true
-    gsettings set org.gnome.desktop.interface icon-theme Papirus 2>/dev/null || true
-    gsettings set org.gnome.desktop.interface color-scheme default 2>/dev/null || true
+    gsettings set org.gnome.desktop.interface gtk-theme Adwaita 2>/dev/null || gtk_failed=1
+    gsettings set org.gnome.desktop.interface icon-theme Papirus 2>/dev/null || gtk_failed=1
+    gsettings set org.gnome.desktop.interface color-scheme default 2>/dev/null || gtk_failed=1
   else
-    gsettings set org.gnome.desktop.interface gtk-theme Adwaita-dark 2>/dev/null || true
-    gsettings set org.gnome.desktop.interface icon-theme Papirus-Dark 2>/dev/null || true
-    gsettings set org.gnome.desktop.interface color-scheme prefer-dark 2>/dev/null || true
+    gsettings set org.gnome.desktop.interface gtk-theme Adwaita-dark 2>/dev/null || gtk_failed=1
+    gsettings set org.gnome.desktop.interface icon-theme Papirus-Dark 2>/dev/null || gtk_failed=1
+    gsettings set org.gnome.desktop.interface color-scheme prefer-dark 2>/dev/null || gtk_failed=1
   fi
+  [ "$gtk_failed" -eq 0 ] || record_failure "could not update all GTK settings"
 fi
 
 # 3. Qt: qt6ct + Kvantum. New Qt apps pick this up; running ones keep their
@@ -89,6 +97,7 @@ fi
 if [ -x "$HOME/.local/bin/kde-theme" ] && "$HOME/.local/bin/kde-theme" "$mode"; then
   :
 else
+  record_failure "kde-theme failed; used a stock Kvantum fallback"
   notify-send -u normal "theme-apply" "kde-theme failed; using a stock Kvantum theme"
   kv_conf="$HOME/.config/Kvantum/kvantum.kvconfig"
   if [ "$mode" = "light" ]; then kv_theme="KvArc"; else kv_theme="KvArcDark"; fi
@@ -103,41 +112,45 @@ fi
 # Dolphin's global view properties live in an xattr. Seed the compact Details
 # view on first use; the helper refuses to overwrite a user choice.
 if [ -x "$HOME/.local/bin/dolphin-view-defaults" ]; then
-  "$HOME/.local/bin/dolphin-view-defaults" >/dev/null 2>&1 || true
+  "$HOME/.local/bin/dolphin-view-defaults" >/dev/null 2>&1 \
+    || record_failure "Dolphin view defaults failed"
 fi
 
 # Telegram Desktop watches its generated theme file and reloads it live after
 # the one-time `telegram-theme --install` activation.
 if [ -x "$HOME/.local/bin/telegram-theme" ]; then
-  "$HOME/.local/bin/telegram-theme" "$mode" --wallpaper "$img" >/dev/null 2>&1 || true
+  "$HOME/.local/bin/telegram-theme" "$mode" --wallpaper "$img" >/dev/null 2>&1 \
+    || record_failure "Telegram theme generation/sync failed"
 fi
-
-# Mark the generated palette so wall ensure-mode can repair a failed switch.
-printf '%s\n' "$mode" > "$HOME/.cache/rice/theme-mode"
 
 # 4. SDDM is system-level. If the theme directory is user-writable (installed
 # with the chown from system/sddm/README.md), keep its wallpaper and palette in
 # sync automatically; otherwise leave it untouched.
 sddm_theme="/usr/share/sddm/themes/rice"
 if [ -w "$sddm_theme" ] && [ -f "$HOME/.cache/rice/Colors.qml" ]; then
-  cp -f "$HOME/.cache/rice/Colors.qml" "$sddm_theme/Colors.qml"
-  cp -f "$img" "$sddm_theme/background.jpg"
+  cp -f "$HOME/.cache/rice/Colors.qml" "$sddm_theme/Colors.qml" \
+    && cp -f "$img" "$sddm_theme/background.jpg" \
+    || record_failure "SDDM palette/wallpaper copy failed"
 fi
 
 # 5. GTK 3/4 cannot reload gtk.css in place. Restart the common, stateless
 # settings apps so they pick up the new palette; other GTK apps do so when
 # reopened. Set RICE_GTK_RESTART=0 to skip this.
 if [ "${RICE_GTK_RESTART:-1}" != "0" ] && [ -x "$HOME/.local/bin/rice-gtk-reload" ]; then
-  "$HOME/.local/bin/rice-gtk-reload" >/dev/null 2>&1 || true
+  "$HOME/.local/bin/rice-gtk-reload" >/dev/null 2>&1 \
+    || record_failure "GTK application reload failed"
 fi
 
 # 6. Reload apps that do not watch their own config
-hyprctl reload >/dev/null 2>&1 || true          # Hyprland border colors
+if hyprctl monitors >/dev/null 2>&1; then
+  hyprctl reload >/dev/null 2>&1 || record_failure "Hyprland reload failed"
+fi
 pkill -SIGUSR1 kitty 2>/dev/null || true        # kitty reloads its config
 swaync-client -rs >/dev/null 2>&1 || true       # SwayNC reloads CSS
 pkill -USR2 -x btop 2>/dev/null || true         # btop re-reads config + active theme
 [ -f "$HOME/.config/cava/config" ] && touch "$HOME/.config/cava/config"  # cava live-config reload
-# Waybar reloads colors.css on its own (reload_style_on_change)
+# Style watching is usually enough, but this also repairs a lost layer after DPMS.
+pkill -USR2 -x waybar 2>/dev/null || true
 
 # 7. User hooks: every executable in the folder gets the image path as $1 and
 # the palette mode as $RICE_MODE.
@@ -145,6 +158,18 @@ export RICE_MODE="$mode"
 hooks="$HOME/.config/rice/hooks/theme-set.d"
 if [ -d "$hooks" ]; then
   for h in "$hooks"/*; do
-    [ -x "$h" ] && "$h" "$img" 9>&- || true
+    if [ -x "$h" ]; then
+      "$h" "$img" 9>&- || record_failure "theme hook failed: ${h##*/}"
+    fi
   done
 fi
+
+if (( ${#failures[@]} != 0 )); then
+  summary=$(printf '%s; ' "${failures[@]}")
+  notify-send -u critical "theme-apply" "Theme applied with errors: $summary" 2>/dev/null || true
+  # Do not mark a partial update complete: `wall ensure-mode` will retry it.
+  exit 1
+fi
+
+printf '%s\n' "$mode" > "$HOME/.cache/rice/theme-mode.tmp"
+mv -f "$HOME/.cache/rice/theme-mode.tmp" "$HOME/.cache/rice/theme-mode"

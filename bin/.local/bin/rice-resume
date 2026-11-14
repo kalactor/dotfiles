@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# rice-resume — restore wallpaper, palette and shell layers after login/sleep.
+set -uo pipefail
+
+CACHE="$HOME/.cache/rice"
+mkdir -p "$CACHE"
+exec 9>"$CACHE/resume.lock"
+flock -w 75 9 || {
+    printf 'rice-resume: timed out waiting for another resume\n' >&2
+    exit 1
+}
+
+log() {
+    printf '%s %s\n' "$(date -Is)" "$*" >> "$CACHE/resume.log"
+}
+
+# A timer may run before a graphical session exists. Login will retry later.
+hyprctl monitors >/dev/null 2>&1 || exit 0
+hyprctl dispatch dpms on >/dev/null 2>&1 || true
+
+failed=0
+if ! "$HOME/.local/bin/rice-mode" resume >/dev/null 2>&1; then
+    log "wallpaper/theme resume failed"
+    failed=1
+fi
+
+waybar_on_primary() {
+    hyprctl layers -j 2>/dev/null | jq -e '
+        to_entries[]
+        | select(.key == "DP-3")
+        | .value.levels[][]
+        | select(.namespace == "waybar")
+    ' >/dev/null 2>&1
+}
+
+waybar_on_secondary() {
+    hyprctl layers -j 2>/dev/null | jq -e '
+        to_entries[]
+        | select(.key == "HDMI-A-1")
+        | .value.levels[][]
+        | select(.namespace == "waybar")
+    ' >/dev/null 2>&1
+}
+
+waybar_ready() {
+    waybar_on_primary && ! waybar_on_secondary
+}
+
+# A running process can lose its layer surface across suspend/DPMS. First try
+# Waybar's supported reload signal; if that fails, recreate only Waybar.
+for _ in 1 2; do
+    if ! pgrep -x waybar >/dev/null 2>&1; then
+        # Do not let the long-lived bar inherit the resume lock.
+        setsid waybar >/dev/null 2>&1 < /dev/null 9>&- &
+    elif ! waybar_on_primary || waybar_on_secondary; then
+        pkill -USR2 -x waybar 2>/dev/null || true
+    fi
+
+    for _ in $(seq 1 20); do
+        waybar_ready && break
+        sleep 0.25
+    done
+    waybar_ready && break
+
+    pkill -x waybar 2>/dev/null || true
+    sleep 0.5
+done
+
+if ! waybar_ready; then
+    log "Waybar did not recover exclusively on DP-3"
+    failed=1
+else
+    log "resume complete: Waybar on DP-3 only"
+fi
+
+if (( failed != 0 )); then
+    notify-send -u critical "Desktop resume" "Some desktop components failed to recover; see ~/.cache/rice/resume.log" 2>/dev/null || true
+fi
+exit "$failed"

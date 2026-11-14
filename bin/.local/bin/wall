@@ -91,8 +91,10 @@ set_wall() {
         ln -sfn "$file" "$CACHE/wallpaper"
         printf '%s\n' "$file" > "$CACHE/wallpaper-$mode"
         printf '%s\n' "$mode" > "$CACHE/effective-mode"
-        set_hyprpaper "$file" || true
-        "$HOME/.local/bin/theme-apply" "$file" "$mode" || true
+        failed=0
+        set_hyprpaper "$file" || failed=1
+        "$HOME/.local/bin/theme-apply" "$file" "$mode" || failed=1
+        exit "$failed"
     ) 9>"$CACHE/wall.lock"
 }
 
@@ -115,14 +117,16 @@ ensure_mode() {
         printf '%s\n' "$mode" > "$CACHE/effective-mode"
 
         cur=$(hyprctl hyprpaper listactive 2>/dev/null | sed -n 's/^DP-3: *//p' | head -n1)
+        failed=0
         if [ "$cur" != "$file" ]; then
-            set_hyprpaper "$file" || true
+            set_hyprpaper "$file" || failed=1
         fi
 
         theme_mode=$(cat "$CACHE/theme-mode" 2>/dev/null || true)
         if [ "$theme_mode" != "$mode" ]; then
-            "$HOME/.local/bin/theme-apply" "$file" "$mode" || true
+            "$HOME/.local/bin/theme-apply" "$file" "$mode" || failed=1
         fi
+        exit "$failed"
     ) 9>"$CACHE/wall.lock"
 }
 

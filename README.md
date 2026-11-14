@@ -15,7 +15,7 @@ rice-mode status
 
 | Path | Contents |
 |---|---|
-| `hypr/.config/hypr/` | `hyprland.lua`, `hyprlock.conf`, `hyprpaper.conf` |
+| `hypr/.config/hypr/` | modular Lua config (`hyprland.lua` + `monitors`, `env`, `look`, `input`, `autostart`, `binds`, `rules`), `hyprlock.conf`, `hyprpaper.conf` |
 | `waybar/.config/waybar/` | bar config + CSS (imports generated `colors.css`) |
 | `swaync/.config/swaync/` | notification daemon + CSS |
 | `rofi/.config/rofi/` | launcher (imports generated `colors.rasi`) |
@@ -34,6 +34,7 @@ rice-mode status
 | `gtk/.config/gtk-{3,4}.0/` | GTK settings + generated `gtk.css` |
 | `rice/.config/rice/hooks/` | optional `theme-set.d/` hooks |
 | `systemd/.config/systemd/user/` | `rice-sun.service` + `rice-sun.timer` |
+| `tests/` | unit fixtures plus failure-path, syntax and isolated-Stow smoke tests |
 | `system/` | **copies only** — system config, SDDM theme, package lists |
 
 Generated files (`colors.css`, `colors.rasi`, `colors.lua`, `colors.conf`,
@@ -44,6 +45,10 @@ wallust/`kde-theme`/`telegram-theme`; do not edit them by hand.
 
 ## Install / re-stow
 
+Package snapshots are in `pkglists/native.txt` and `pkglists/aur.txt`. Review
+and install what you need first (the native list includes applications beyond
+the rice). Then install the configuration into your home directory:
+
 ```bash
 cd ~/dotfiles
 stow hypr waybar kitty swaync rofi wallust swayimg wlogout vim bash bin gtk rice mpv chrome btop cava fastfetch dolphin telegram
@@ -52,6 +57,19 @@ stow --no-folding systemd
 systemctl --user daemon-reload
 systemctl --user enable --now rice-sun.timer
 ```
+
+On a new profile, set the first wallpaper **before the next graphical login**
+so wallust creates all initially empty color includes:
+
+```bash
+wall set ~/Pictures/walls/light/<image>.jpg   # or an image from .../dark/
+./tests/smoke.sh                             # syntax, fixtures, fresh Stow restore
+```
+
+Rofi utilities need `libqalculate` for the calculator. The optional Seed4
+Waybar module uses separately installed personal `seed4`/`seed4-toggle`
+scripts; those are external and not required by the base rice. Telegram's
+one-time activation is documented below.
 
 `theme-apply` seeds Dolphin's global Details view on first run (stored in an
 xattr); it never overwrites a view mode you have already chosen.
@@ -70,6 +88,7 @@ guard uses `KITTY_WINDOW_ID`, so nested shells stay quiet).
 |---|---|
 | Hyprland borders | `~/.config/hypr/colors.lua` |
 | Waybar | `~/.config/waybar/colors.css` |
+| swayimg | `~/.config/swayimg/colors.lua` |
 | SwayNC | `~/.config/swaync/colors.css` |
 | rofi | `~/.config/rofi/colors.rasi` |
 | kitty | `~/.config/kitty/colors.conf` |
@@ -112,7 +131,7 @@ surfaces follow the same palette.
 | cava | live reload via `live-config` |
 | vim | live reload within 2 s (timer + focus) |
 | starship | next prompt |
-| rofi, wlogout, hyprlock | next time they open |
+| rofi, wlogout, hyprlock, swayimg | next time they open |
 | Telegram Desktop | live reload via its theme-file watcher |
 | SDDM | next greeter start (after install) |
 | GTK apps | gsettings theme/icon switch; common settings apps restart automatically, others on next open |
@@ -156,8 +175,9 @@ Wallpaper binds (always inside the current light/dark mode):
 | `Super+F7` | random wallpaper |
 | `Super+F8` | pick with thumbnails |
 
-The chosen wallpaper is also symlinked to `~/.cache/rice/wallpaper`; hyprpaper
-loads that path at login, so the selection survives a reboot.
+The chosen wallpaper is also symlinked to `~/.cache/rice/wallpaper`.
+`rice-resume` reapplies it after login and sleep, so the selection survives a
+reboot without storing a user-specific absolute path in `hyprpaper.conf`.
 
 Add a hook by dropping an executable in `~/.config/rice/hooks/theme-set.d/`.
 It receives the image path as `$1` and the palette mode as `$RICE_MODE`.
@@ -184,7 +204,9 @@ weather module); change it with `rice-mode location LAT,LON` or
 `rice-sun.timer` runs `rice-mode tick` every five minutes. A manual
 `light`/`dark`/`toggle` override is persistent until `rice-mode auto` is used
 again. The Waybar sun/moon indicator shows the effective mode; left-click
-toggles, right-click returns to auto.
+toggles, right-click returns to auto. `rice-resume` runs after login and sleep:
+it reapplies the palette, restores the wallpaper, and verifies that Waybar has
+a layer on `DP-3` only, recreating it if necessary.
 
 Mode state lives in `~/.cache/rice/`: `mode`, `effective-mode`, `location`,
 `wallpaper-light`, `wallpaper-dark`, and `theme-mode`.
@@ -193,7 +215,10 @@ Mode state lives in `~/.cache/rice/`: `mode`, `effective-mode`, `location`,
 
 | Keys | Action |
 |---|---|
-| `Super+Return` | kitty |
+| `Super+T` | kitty |
+| `Super+F1` | live keybind cheatsheet |
+| `Super+Ctrl+C` | calculator (result copies to clipboard) |
+| `Super+Ctrl+E` | emoji picker |
 | `Super+A` | rofi launcher |
 | `Super+N` / `Super+Shift+N` | notifications / DND |
 | `Super+Shift+V` | clipboard history |
@@ -209,17 +234,27 @@ Mode state lives in `~/.cache/rice/`: `mode`, `effective-mode`, `location`,
 | `XF86Audio*` | volume via swayosd |
 | `XF86MonBrightness*` | DP-3 brightness over DDC/CI |
 
-Waybar runs **only on `DP-3`**. Workspaces 1–5 live there; 6–10 on `HDMI-A-1`.
+Waybar runs **only on `DP-3`**. Workspaces stay strictly numeric: 1–5 live
+there; 6–10 on `HDMI-A-1`.
 
 ## Health / restart
 
 ```bash
-rice-doctor                       # commands, services, generated files, mode state
+rice-doctor                       # health check; exits nonzero on required failures
 rice-mode status                  # current mode + sunrise/sunset
 systemctl --user list-timers rice-sun.timer
 rice-restart                      # restart waybar + swaync + hyprpaper
+rice-resume                       # verify/rebuild wallpaper, palette and Waybar
 rice-gtk-reload                   # restart running GTK settings apps after a palette change
+rice-keybinds --print             # current bindings without opening rofi
+./tests/smoke.sh                  # offline-safe test + isolated Stow restoration
+RICE_LIVE_CHECKS=1 ./tests/smoke.sh  # include rice-doctor at the end
 ```
+
+Both `wall` and `theme-apply` return failure when generation was incomplete;
+an optional app reload may still be attempted independently. `theme-mode` is
+only marked complete after required generation succeeds, allowing a later
+timer tick to retry partial updates.
 
 ## SDDM
 

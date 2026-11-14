@@ -51,6 +51,7 @@ kdegraphics-thumbnailers
 kitty
 kvantum
 libpulse
+libqalculate
 libva-nvidia-driver
 libvirt
 linux

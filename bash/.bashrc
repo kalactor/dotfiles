@@ -13,13 +13,15 @@ alias lt='eza --tree --level=2 --icons'
 PS1='[\u@\h \W]\$ '
 
 # fnm
-FNM_PATH="/home/amit/.local/share/fnm"
-if [ -d "$FNM_PATH" ]; then
+FNM_PATH="$HOME/.local/share/fnm"
+if [ -d "$FNM_PATH" ] && command -v fnm >/dev/null 2>&1; then
   export PATH="$FNM_PATH:$PATH"
   eval "$(fnm env --shell bash)"
 fi
 
-eval "$(fnm env --use-on-cd --shell bash)"
+if command -v fnm >/dev/null 2>&1; then
+  eval "$(fnm env --use-on-cd --shell bash)"
+fi
 
 [[ "$TERM_PROGRAM" == "kiro" ]] && . "$(kiro --locate-shell-integration-path bash)"
 
@@ -34,8 +36,8 @@ fi
 export PATH="$HOME/.local/bin:$PATH"
 
 # Directionally Local (dl)
-export PATH="/home/amit/.directionallylocal/bin:$PATH"
-. "$HOME/.cargo/env"
+export PATH="$HOME/.directionallylocal/bin:$PATH"
+[[ -r "$HOME/.cargo/env" ]] && . "$HOME/.cargo/env"
 
 # Editor
 export EDITOR=vim

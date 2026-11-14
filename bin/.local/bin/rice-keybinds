@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+"""Show the live Hyprland binds in rofi, or print them with --print."""
+
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+
+MODIFIERS = ((64, "Super"), (4, "Ctrl"), (1, "Shift"), (8, "Alt"))
+
+
+def key_label(binding: dict[str, object]) -> str:
+    mask = int(binding.get("modmask", 0))
+    parts = [name for bit, name in MODIFIERS if mask & bit]
+    key = str(binding.get("key", ""))
+    if key.startswith("mouse:"):
+        key = {"mouse:272": "LMB", "mouse:273": "RMB"}.get(key, key)
+    parts.append(key)
+    return "+".join(parts)
+
+
+def bindings() -> list[tuple[str, str]]:
+    result = subprocess.run(
+        ["hyprctl", "binds", "-j"], check=True, capture_output=True, text=True
+    )
+    rows = []
+    for binding in json.loads(result.stdout):
+        keys = key_label(binding)
+        description = str(binding.get("description") or "").strip()
+        if not description:
+            description = str(binding.get("dispatcher", "Hyprland action"))
+            description = description.removeprefix("HL.Dispatcher(").removesuffix(")")
+        rows.append((keys, description))
+    return rows
+
+
+def main() -> int:
+    try:
+        rows = bindings()
+    except (OSError, subprocess.SubprocessError, ValueError) as error:
+        print(f"rice-keybinds: {error}", file=sys.stderr)
+        return 1
+
+    text = "\n".join(f"{keys:<28} {description}" for keys, description in rows)
+    if "--print" in sys.argv[1:]:
+        print(text)
+        return 0
+
+    process = subprocess.run(
+        [
+            "rofi",
+            "-dmenu",
+            "-i",
+            "-no-custom",
+            "-p",
+            "Keybinds",
+            "-mesg",
+            "Live bindings from Hyprland · numeric workspaces 1–10",
+            "-theme-str",
+            "window { width: 58%; } listview { lines: 16; }",
+        ],
+        input=text,
+        text=True,
+    )
+    return process.returncode
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

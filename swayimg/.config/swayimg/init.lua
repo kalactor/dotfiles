@@ -12,17 +12,29 @@ swayimg.antialiasing = true
 swayimg.imagelist.recursive = true
 swayimg.imagelist.order = "numeric"
 
+-- Wallust palette (generated on every wallpaper change; fallback for first run).
+local palette = {}
+local palette_ok, loaded = pcall(dofile, os.getenv("HOME") .. "/.config/swayimg/colors.lua")
+if palette_ok and type(loaded) == "table" then
+  palette = loaded
+end
+local foreground = palette.foreground or 0xffcdd6f4
+local background = palette.background or 0xff11111b
+local surface = palette.surface or 0xff1e1e2e
+local selection = palette.selection or 0xff313244
+local accent = palette.accent or 0xff89b4fa
+
 -- text overlay
 swayimg.text.font = "JetBrainsMono Nerd Font"
 swayimg.text.size = 16
-swayimg.text.color = 0xffcdd6f4
+swayimg.text.color = foreground
 
 --------------------------------------------------------------------------------
 -- Viewer
 --------------------------------------------------------------------------------
 swayimg.viewer.default_scale = "optimal"
-swayimg.viewer.set_window_background(0xff11111b)
-swayimg.viewer.set_image_chessboard(20, 0xff1e1e2e, 0xff313244)
+swayimg.viewer.set_window_background(background)
+swayimg.viewer.set_image_chessboard(20, surface, selection)
 
 swayimg.viewer.text = {
   topleft    = { "{name}" },
@@ -35,10 +47,10 @@ swayimg.viewer.text = {
 --------------------------------------------------------------------------------
 swayimg.gallery.thumb_size = 220
 swayimg.gallery.pstore = true                    -- cache thumbnails on disk
-swayimg.gallery.window_color = 0xff11111b
-swayimg.gallery.unselected_color = 0xff1e1e2e
-swayimg.gallery.selected_color = 0xff313244
-swayimg.gallery.border_color = 0xff89b4fa
+swayimg.gallery.window_color = background
+swayimg.gallery.unselected_color = surface
+swayimg.gallery.selected_color = selection
+swayimg.gallery.border_color = accent
 
 swayimg.slideshow.timeout = 8
 
