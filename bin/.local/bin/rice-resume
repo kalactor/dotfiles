@@ -70,6 +70,10 @@ if ! waybar_ready; then
     log "Waybar did not recover exclusively on DP-3"
     failed=1
 else
+    # theme-apply has already reloaded the palette, but at login the style
+    # watcher may not have been ready yet. Repeat the touch once the bar is up.
+    sleep 0.5
+    touch "$HOME/.config/waybar/style.css" 2>/dev/null || true
     log "resume complete: Waybar on DP-3 only"
 fi
 

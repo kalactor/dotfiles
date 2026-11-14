@@ -177,6 +177,8 @@ class PaletteTests(unittest.TestCase):
             "surface",
             "surface_alt",
             "surface_fg",
+            "bar_bg",
+            "bar_fg",
             "muted",
             "border",
             "accent",
@@ -208,6 +210,20 @@ class PaletteTests(unittest.TestCase):
         broken["foreground"] = palette["background"]
         failures = self.rc.check_palette(broken, "#baadaa")
         self.assertTrue(any("foreground" in failure for failure in failures))
+
+    def test_bar_tint_follows_the_wallpaper_sample(self):
+        palette = self.rc.compute_palette(
+            BASE_LIGHT,
+            ANSI_LIGHT,
+            "#baadaa",
+            wallpaper_sample="#44593e",
+            mode="light",
+        )
+        self.assertNotEqual(palette["bar_bg"], palette["background"])
+        self.assertNotEqual(palette["bar_bg"], palette["surface"])
+        self.assertGreaterEqual(
+            self.rc.contrast(palette["bar_fg"], palette["bar_bg"]), 4.49
+        )
 
     def test_reprocessing_preserves_the_wallpaper_accent(self):
         palette = self.rc.compute_palette(BASE_LIGHT, ANSI_LIGHT, "#baadaa")

@@ -255,6 +255,8 @@ def palette_text(palette: dict[str, str]) -> str:
             "surface",
             "surface_alt",
             "surface_fg",
+            "bar_bg",
+            "bar_fg",
             "muted",
             "border",
             "accent",
@@ -291,6 +293,8 @@ def compute_palette(
     base: dict[str, str],
     ansi: dict[str, str] | None,
     effective_background: str,
+    wallpaper_sample: str | None = None,
+    mode: str | None = None,
 ) -> dict[str, str]:
     palette = {
         key: value.lower() if value.startswith("#") else value
@@ -328,6 +332,19 @@ def compute_palette(
     palette["surface"] = adjust(mix(background, foreground, 0.06), foreground, ANSI_TARGET)
     palette["surface_alt"] = adjust(mix(background, foreground, 0.10), foreground, ANSI_TARGET)
     palette["surface_fg"] = foreground
+    # The bar is the most visible surface.  wallust's light background is
+    # deliberately near-white, so a plain @background bar makes every
+    # wallpaper look the same.  Tint it with the wallpaper sample instead.
+    if wallpaper_sample:
+        light_mode = (mode == "light") if mode in ("light", "dark") else rel_lum(background) > 0.4
+        amount = 0.45 if light_mode else 0.35
+        bar = adjust(mix(background, wallpaper_sample, amount), foreground, ANSI_TARGET)
+    else:
+        bar = palette["surface"]
+    palette["bar_bg"] = bar
+    palette["bar_fg"] = (
+        foreground if contrast(foreground, bar) >= ANSI_TARGET - 1e-9 else best_fg(bar)
+    )
     palette["muted"] = desaturate(
         adjust(palette["color8"], effective_background, MUTED_TARGET), 0.06
     )
@@ -378,6 +395,7 @@ def check_palette(palette: dict[str, str], effective_background: str | None = No
     need("ANSI black/bright-white", palette["color0"], palette["color15"], PAIR_TARGET)
     need("surface text", palette["surface_fg"], palette["surface"], ANSI_TARGET)
     need("surface-alt text", palette["surface_fg"], palette["surface_alt"], ANSI_TARGET)
+    need("bar text", palette["bar_fg"], palette["bar_bg"], ANSI_TARGET)
     need("muted", palette["muted"], background, MUTED_TARGET)
     need("border", palette["border"], background, BORDER_TARGET)
     for name in ("accent", "accent_alt", "danger", "success", "warning", "info", "link"):
@@ -404,6 +422,7 @@ def check_report(
     add("ANSI bright pair", palette["color0"], PAIR_TARGET, palette["color15"])
     add("surface", palette["surface_fg"], ANSI_TARGET, palette["surface"])
     add("surface-alt", palette["surface_fg"], ANSI_TARGET, palette["surface_alt"])
+    add("bar", palette["bar_fg"], ANSI_TARGET, palette["bar_bg"])
     add("muted", palette["muted"], MUTED_TARGET)
     add("border", palette["border"], BORDER_TARGET)
     for name in ("accent", "accent_alt", "danger", "success", "warning", "info", "link"):
@@ -598,7 +617,7 @@ def main(argv: list[str] | None = None) -> int:
         opacity = args.opacity if args.opacity is not None else kitty_opacity() * hypr_opacity()
         composited = effective_background(base["background"], wallpaper_sample, opacity)
 
-    palette = compute_palette(base, ansi, composited)
+    palette = compute_palette(base, ansi, composited, wallpaper_sample, mode)
 
     if args.check:
         failures = check_palette(palette, composited)

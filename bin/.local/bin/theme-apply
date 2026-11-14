@@ -184,8 +184,16 @@ pkill -SIGUSR1 kitty 2>/dev/null || true        # kitty reloads its config
 swaync-client -rs >/dev/null 2>&1 || true       # SwayNC reloads CSS
 pkill -USR2 -x btop 2>/dev/null || true         # btop re-reads config + active theme
 [ -f "$HOME/.config/cava/config" ] && touch "$HOME/.config/cava/config"  # cava live-config reload
-# Style watching is usually enough, but this also repairs a lost layer after DPMS.
+# Waybar watches style.css for changes and reloads its imported colors.css.
+# Touch it as well as signalling: at login the signal can arrive while the
+# bar is still initialising, leaving the previous palette on screen.
+waybar_style="$HOME/.config/waybar/style.css"
+[ -f "$waybar_style" ] && touch "$waybar_style"
 pkill -USR2 -x waybar 2>/dev/null || true
+if [ -f "$waybar_style" ]; then
+  sleep 0.25
+  touch "$waybar_style"
+fi
 
 # 7. User hooks: every executable in the folder gets the image path as $1 and
 # the palette mode as $RICE_MODE.

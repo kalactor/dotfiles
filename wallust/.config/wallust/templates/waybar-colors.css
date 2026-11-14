@@ -3,10 +3,14 @@
 @define-color foreground {{foreground}};
 @define-color surface {{surface}};
 @define-color surface_alt {{surface_alt}};
+@define-color bar_bg {{bar_bg}};
+@define-color bar_fg {{bar_fg}};
 @define-color muted {{muted}};
 @define-color border {{border}};
 @define-color accent {{accent}};
 @define-color accent_alt {{accent_alt}};
+@define-color accent_fg {{accent_fg}};
+@define-color accent_alt_fg {{accent_alt_fg}};
 @define-color danger {{danger}};
 @define-color success {{success}};
 @define-color warning {{warning}};
