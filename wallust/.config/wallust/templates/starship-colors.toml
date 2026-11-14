@@ -163,6 +163,8 @@ format = " [py](italic) [${symbol}${version}]($style)"
 symbol = "[⌉](bold bright_blue)⌊ "
 version_format = "${raw}"
 style = "bold bright_yellow"
+# A lone .py script should not make the home directory look like a project.
+detect_extensions = []
 
 [ruby]
 format = " [rb](italic) [${symbol}${version}]($style)"
