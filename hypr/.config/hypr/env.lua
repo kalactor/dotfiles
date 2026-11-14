@@ -1,6 +1,8 @@
-hl.env("XCURSOR_SIZE", "24")
-hl.env("HYPRCURSOR_SIZE", "24")
-hl.env("XCURSOR_THEME", "Adwaita")
+local vars = require("vars")
+
+hl.env("XCURSOR_SIZE", tostring(vars.cursor_size))
+hl.env("HYPRCURSOR_SIZE", tostring(vars.cursor_size))
+hl.env("XCURSOR_THEME", vars.cursor_theme)
 
 -- NVIDIA (nvidia-open, DRM modesetting enabled).
 hl.env("LIBVA_DRIVER_NAME", "nvidia")

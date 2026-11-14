@@ -1,8 +1,10 @@
+local vars = require("vars")
+
 hl.config({
     general = {
-        gaps_in = 4,
-        gaps_out = 8,
-        border_size = 2,
+        gaps_in = vars.gaps_in,
+        gaps_out = vars.gaps_out,
+        border_size = vars.border_size,
         col = {
             active_border = { colors = { "rgba(33ccffee)", "rgba(00ff99ee)" }, angle = 45 },
             inactive_border = "rgba(595959aa)",
@@ -13,30 +15,46 @@ hl.config({
     },
 
     decoration = {
-        rounding = 10,
-        rounding_power = 2,
+        rounding = vars.rounding,
+        rounding_power = vars.rounding_power,
 
         -- Global transparency, shared by every application.
-        active_opacity = 0.90,
-        inactive_opacity = 0.85,
+        active_opacity = vars.active_opacity,
+        inactive_opacity = vars.inactive_opacity,
 
         -- Kept deliberately light for the GTX 1660 at 165 Hz.
         shadow = {
-            enabled = true,
-            range = 4,
-            render_power = 3,
-            color = 0xee1a1a1a,
+            enabled = vars.shadow_enabled,
+            range = vars.shadow_range,
+            render_power = vars.shadow_render_power,
+            color = vars.shadow_color,
         },
         blur = {
-            enabled = true,
-            size = 3,
-            passes = 1,
-            vibrancy = 0.1696,
+            enabled = vars.blur_enabled,
+            size = vars.blur_size,
+            passes = vars.blur_passes,
+            vibrancy = vars.blur_vibrancy,
+            ignore_opacity = vars.blur_ignore_opacity,
         },
     },
 
     animations = {
         enabled = true,
+    },
+
+    binds = {
+        scroll_event_delay = 0,
+    },
+
+    misc = {
+        disable_hyprland_logo = true,
+        force_default_wallpaper = 0,
+        close_special_on_empty = true,
+        on_focus_under_fullscreen = 2,
+        allow_session_lock_restore = true,
+        mouse_move_enables_dpms = true,
+        key_press_enables_dpms = true,
+        focus_on_activate = true,
     },
 })
 
@@ -72,10 +90,6 @@ hl.config({
     dwindle = { preserve_split = true },
     master = { new_status = "master" },
     scrolling = { fullscreen_on_one_column = true },
-    misc = {
-        force_default_wallpaper = 0,
-        disable_hyprland_logo = true,
-    },
     layers = {
         allow_new_top_layers_over_existing_fullscreen = true,
     },

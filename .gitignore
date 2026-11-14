@@ -32,3 +32,6 @@ __pycache__/
 .DS_Store
 *.swp
 *~
+
+# Personal Hyprland overrides (see hypr/.config/hypr/vars.lua)
+hypr/.config/hypr/user.lua

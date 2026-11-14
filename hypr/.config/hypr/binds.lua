@@ -1,7 +1,11 @@
-local mainMod = "SUPER"
-local terminal = "kitty"
-local fileManager = "dolphin"
-local menu = "rofi -show drun"
+local vars    = require("vars")
+local special = require("special")
+local window  = require("window")
+
+local mainMod = vars.workspace_mod
+local terminal = vars.terminal
+local fileManager = vars.file_manager
+local menu = vars.launcher
 
 -- One registration path keeps descriptions attached to the actual bindings.
 -- `rice-keybinds` reads these through `hyprctl binds -j`, so help cannot drift.
@@ -15,7 +19,7 @@ end
 bind(mainMod .. " + T", hl.dsp.exec_cmd(terminal), "Terminal: kitty")
 bind(mainMod .. " + E", hl.dsp.exec_cmd(fileManager), "Files: Dolphin")
 bind(mainMod .. " + A", hl.dsp.exec_cmd(menu), "Application launcher")
-bind(mainMod .. " + C", hl.dsp.exec_cmd("google-chrome-stable"), "Browser: Chrome")
+bind(mainMod .. " + C", hl.dsp.exec_cmd(vars.browser), "Browser: Chrome")
 bind(mainMod .. " + Backspace", hl.dsp.exec_cmd("pkill wlogout || wlogout"), "Power menu")
 bind(mainMod .. " + L", hl.dsp.exec_cmd("loginctl lock-session"), "Lock session")
 bind(mainMod .. " + M", hl.dsp.exec_cmd("hyprshutdown"), "Exit Hyprland")
@@ -28,8 +32,25 @@ bind(mainMod .. " + Q", hl.dsp.window.close(), "Close window")
 bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }), "Toggle floating")
 bind(mainMod .. " + P", hl.dsp.window.pseudo(), "Toggle pseudotiling")
 bind(mainMod .. " + J", hl.dsp.layout("togglesplit"), "Toggle split")
-bind(mainMod .. " + S", hl.dsp.workspace.toggle_special("magic"), "Toggle scratchpad")
-bind(mainMod .. " + SHIFT + S", hl.dsp.window.move({ workspace = "special:magic" }), "Move window to scratchpad")
+bind(mainMod .. " + F", hl.dsp.window.fullscreen({ mode = "fullscreen" }), "Toggle fullscreen")
+bind(mainMod .. " + ALT + F", hl.dsp.window.fullscreen({ mode = "maximized" }), "Toggle maximized")
+bind(mainMod .. " + SHIFT + P", hl.dsp.window.pin(), "Toggle pinned window")
+
+-- Relative resizing (10% steps, repeat while held).
+bind(mainMod .. " + Minus", window.resize_active_window(-10, 0), "Decrease window width", { repeating = true })
+bind(mainMod .. " + Equal", window.resize_active_window(10, 0), "Increase window width", { repeating = true })
+bind(mainMod .. " + SHIFT + Minus", window.resize_active_window(0, -10), "Decrease window height", { repeating = true })
+bind(mainMod .. " + SHIFT + Equal", window.resize_active_window(0, 10), "Increase window height", { repeating = true })
+
+bind("CTRL + SUPER + Backslash", hl.dsp.window.center(), "Center window")
+bind("CTRL + SUPER + ALT + Backslash", window.normalize, "Resize to 55x70% and center")
+bind(mainMod .. " + ALT + Backslash", window.picture_in_picture, "Picture-in-picture mode")
+
+-- Special workspaces
+bind(mainMod .. " + S", special.toggle_any, "Toggle scratchpad or close special workspace")
+bind(mainMod .. " + SHIFT + S", hl.dsp.window.move({ workspace = "special:" .. vars.scratchpad }), "Move window to scratchpad")
+bind("CTRL + SHIFT + Escape", special.toggle("sysmon"), "System monitor workspace")
+bind(mainMod .. " + D", special.toggle("communication"), "Communication workspace")
 
 -- Notifications, utilities and capture
 bind(mainMod .. " + N", hl.dsp.exec_cmd("swaync-client -t"), "Notification center")
