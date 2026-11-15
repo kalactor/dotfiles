@@ -99,6 +99,55 @@ OtherIconSetting=keep
             self.assertEqual(text.count("[General]"), 1)
             self.assertEqual(text.count("[Colors:Header][Inactive]"), 1)
             self.assertNotIn("Theme=Papirus-Dark", text)
+            selection = self.kde.selection_background(PALETTE, "light")
+            self.assertIn(
+                f"[Colors:Selection]\nBackgroundAlternate={selection}", text
+            )
+            self.assertIn(f"BackgroundNormal={selection}", text)
+            self.assertIn("ForegroundNormal=#655943", text)
+
+    def test_selection_background_stays_readable(self):
+        for mode in ("light", "dark"):
+            background = self.kde.selection_background(PALETTE, mode)
+            self.assertGreaterEqual(
+                self.kde.contrast(background, PALETTE["foreground"]), 4.5
+            )
+
+    def test_selection_shapes_use_the_selection_tint(self):
+        svg = (
+            '<g style="fill:#3daee9">'
+            '<path style="fill:#3daee9" id="itemview-toggled"/>'
+            '<path id="itemview-pressed"/>'
+            "</g>"
+            '<use id="itemview-focused" xlink:href="#itemview-toggled" '
+            'style="opacity:.2"/>'
+        )
+        rendered = self.kde.recolor_svg_selection(svg, "#C2BBBC")
+        self.assertEqual(rendered.count("fill:#C2BBBC"), 2)
+        self.assertIn('id="itemview-focused"', rendered)
+        self.assertIn('xlink:href="#itemview-toggled"', rendered)
+
+    def test_kvantum_selection_text_follows_the_palette(self):
+        text = (
+            "[ItemView]\n"
+            "text.normal.color=#000000c8\n"
+            "text.focus.color=black\n"
+            "\n"
+            "[Other]\n"
+            "text.focus.color=keep\n"
+        )
+        rendered = self.kde.replace_section_colors(
+            text,
+            {
+                "ItemView": {
+                    "text.normal.color": "#413932",
+                    "text.focus.color": "#413932",
+                }
+            },
+        )
+        self.assertIn("text.normal.color=#413932", rendered)
+        self.assertIn("text.focus.color=#413932", rendered)
+        self.assertIn("[Other]\ntext.focus.color=keep", rendered)
 
 
 class TelegramThemeTests(unittest.TestCase):

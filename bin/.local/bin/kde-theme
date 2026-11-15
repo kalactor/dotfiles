@@ -169,6 +169,25 @@ def contrast_text(bg: str, palette: dict[str, str]) -> str:
     return fg if contrast(bg, fg) >= contrast(bg, back) else back
 
 
+def selection_background(palette: dict[str, str], mode: str) -> str:
+    """Return an accent tint that keeps the normal foreground readable.
+
+    KDE item views paint the selected row from the Kvantum SVG while drawing
+    normal (not highlighted) text on it.  A raw accent background therefore
+    makes Dolphin's current place dark-on-dark; a tinted surface keeps the
+    normal foreground readable while still marking the selection.
+    """
+    background = palette["background"]
+    foreground = palette["foreground"]
+    accent = palette.get("accent", palette["color3"])
+    amount = 0.22 if mode == "light" else 0.30
+    candidate = mix(background, accent, amount)
+    while amount > 0.01 and contrast(candidate, foreground) < 4.5:
+        amount = max(0.0, amount - 0.05)
+        candidate = mix(background, accent, amount)
+    return candidate
+
+
 def adjust_lightness(color: str, factor: float) -> str:
     r, g, b = (x / 255 for x in hex_to_rgb(color))
     h, l, s = colorsys.rgb_to_hls(r, g, b)
@@ -280,6 +299,28 @@ def recolor_svg(svg: str, palette: dict[str, str], accent: str, mode: str) -> st
     return pattern.sub(replace, svg)
 
 
+def recolor_svg_selection(svg: str, color: str) -> str:
+    """Paint item-view selection shapes with the readable selection tint.
+
+    ``itemview-toggled`` carries an explicit fill, while ``itemview-pressed``
+    inherits it from a parent group.  Add an explicit fill to both so a raw
+    accent from the base theme cannot make the selected row unreadable.
+    """
+    def replace(match: re.Match[str]) -> str:
+        tag = match.group(0)
+        if not re.search(r'id="itemview-(?:toggled|pressed)', tag):
+            return tag
+        if re.search(r"fill:#[0-9A-Fa-f]{3,6}\b", tag):
+            return re.sub(r"fill:#[0-9A-Fa-f]{3,6}\b", f"fill:{color}", tag)
+        if re.search(r'fill="#[0-9A-Fa-f]{3,6}"', tag):
+            return re.sub(r'fill="#[0-9A-Fa-f]{3,6}"', f'fill="{color}"', tag)
+        if 'style="' in tag:
+            return re.sub(r'style="', f'style="fill:{color};', tag, count=1)
+        return re.sub(r"(\s*/?>)$", f' style="fill:{color}"\\1', tag)
+
+    return re.sub(r"<[^>]+>", replace, svg)
+
+
 def replace_general_colors(text: str, colors: dict[str, str]) -> str:
     out: list[str] = []
     in_general = False
@@ -300,6 +341,27 @@ def replace_general_colors(text: str, colors: dict[str, str]) -> str:
     return "\n".join(out) + "\n"
 
 
+def replace_section_colors(
+    text: str, colors: dict[str, dict[str, str]]
+) -> str:
+    """Replace exact keys in named INI sections, preserving everything else."""
+    out: list[str] = []
+    section = None
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            section = stripped[1:-1]
+            out.append(line)
+            continue
+        if section in colors and "=" in line:
+            key = line.split("=", 1)[0].strip()
+            if key in colors[section]:
+                out.append(f"{key}={colors[section][key]}")
+                continue
+        out.append(line)
+    return "\n".join(out) + "\n"
+
+
 def write_kdeglobals(palette: dict[str, str], mode: str) -> None:
     bg = palette["background"]
     fg = palette["foreground"]
@@ -311,7 +373,8 @@ def write_kdeglobals(palette: dict[str, str], mode: str) -> None:
     c5 = palette.get("accent_alt", palette["color5"])
     c8 = palette.get("muted", palette["color8"])
     link = palette.get("link", palette["color4"])
-    sel_fg = palette.get("accent_fg") or contrast_text(c3, palette)
+    selection_bg = selection_background(palette, mode)
+    sel_fg = fg
     view_alt = mix(bg, c0, 0.55)
     button_alt = mix(c0, bg, 0.35)
     header = mix(c0, bg, 0.25)
@@ -397,8 +460,8 @@ def write_kdeglobals(palette: dict[str, str], mode: str) -> None:
             "ForegroundVisited": c5,
         },
         "Colors:Selection": {
-            "BackgroundAlternate": c3,
-            "BackgroundNormal": c3,
+            "BackgroundAlternate": selection_bg,
+            "BackgroundNormal": selection_bg,
             "DecorationFocus": c3,
             "DecorationHover": c4,
             "ForegroundActive": sel_fg,
@@ -515,7 +578,8 @@ def write_kvantum(palette: dict[str, str], mode: str) -> None:
     c5 = palette.get("accent_alt", palette["color5"])
     c8 = palette.get("muted", palette["color8"])
     link = palette.get("link", palette["color4"])
-    sel_fg = palette.get("accent_fg") or contrast_text(c3, palette)
+    selection_bg = selection_background(palette, mode)
+    sel_fg = fg
     theme_name = "WallustFlat"
     # KvFlatLight ships a dark toolbar/URL field with dark icons, which is hard
     # to read. KvArc keeps the light chrome light; KvFlat is the flatter dark
@@ -534,8 +598,8 @@ def write_kvantum(palette: dict[str, str], mode: str) -> None:
         "mid.light.color": mix(c0, fg, 0.12),
         "dark.color": mix(bg, "#000000", 0.15),
         "mid.color": c0,
-        "highlight.color": c3,
-        "inactive.highlight.color": mix(c3, bg, 0.35),
+        "highlight.color": selection_bg,
+        "inactive.highlight.color": mix(selection_bg, bg, 0.35),
         "text.color": fg,
         "window.text.color": fg,
         "button.text.color": fg,
@@ -547,20 +611,101 @@ def write_kvantum(palette: dict[str, str], mode: str) -> None:
         "progress.indicator.text.color": sel_fg,
     }
 
+    # The base themes hardcode black/white text for several selected, checked,
+    # and hovered widgets.  Those values assume the base theme's highlight
+    # colour, not our tinted selection surface, so drive them from the palette.
+    section_colors = {
+        "ItemView": {
+            "text.normal.color": fg,
+            "text.focus.color": fg,
+            "text.press.color": fg,
+            "text.toggle.color": fg,
+        },
+        "MenuItem": {
+            "text.normal.color": fg,
+            "text.focus.color": fg,
+        },
+        "MenuBarItem": {
+            "text.normal.color": fg,
+            "text.focus.color": fg,
+        },
+        "PanelButtonCommand": {
+            "text.normal.color": fg,
+            "text.focus.color": fg,
+            "text.press.color": fg,
+            "text.toggle.color": fg,
+        },
+        "ToolboxTab": {
+            "text.normal.color": fg,
+            "text.focus.color": fg,
+            "text.press.color": fg,
+            "text.toggle.color": fg,
+        },
+        "Tab": {
+            "text.normal.color": fg,
+            "text.focus.color": fg,
+            "text.toggle.color": fg,
+        },
+        "HeaderSection": {
+            "text.normal.color": fg,
+            "text.focus.color": fg,
+            "text.toggle.color": fg,
+        },
+        "Toolbar": {
+            "text.normal.color": fg,
+            "text.focus.color": fg,
+        },
+        "Progressbar": {
+            "text.normal.color": fg,
+            "text.focus.color": fg,
+            "text.press.color": fg,
+            "text.toggle.color": fg,
+        },
+        "Menu": {
+            "text.normal.color": fg,
+        },
+        "GroupBox": {
+            "text.normal.color": fg,
+            "text.focus.color": fg,
+        },
+        "RadioButton": {
+            "text.normal.color": fg,
+            "text.focus.color": fg,
+        },
+        "CheckBox": {
+            "text.normal.color": fg,
+            "text.focus.color": fg,
+        },
+        "Dock": {
+            "text.normal.color": fg,
+        },
+        "DockTitle": {
+            "text.normal.color": fg,
+            "text.focus.color": fg,
+        },
+        "ComboBox": {
+            "text.press.color": fg,
+        },
+    }
+
     target_dir = HOME / ".config" / "Kvantum" / theme_name
     target_dir.mkdir(parents=True, exist_ok=True)
 
     config_text = (base_dir / f"{base_name}.kvconfig").read_text()
+    config_text = replace_general_colors(config_text, colors)
+    config_text = replace_section_colors(config_text, section_colors)
     write_text_atomic(
         target_dir / f"{theme_name}.kvconfig",
-        replace_general_colors(config_text, colors),
+        config_text,
     )
 
     svg = (base_dir / f"{base_name}.svg").read_text()
     accent = base_accent(svg)
+    svg_text = recolor_svg(svg, palette, accent, mode)
+    svg_text = recolor_svg_selection(svg_text, selection_bg)
     write_text_atomic(
         target_dir / f"{theme_name}.svg",
-        recolor_svg(svg, palette, accent, mode),
+        svg_text,
     )
 
     kv_config = HOME / ".config" / "Kvantum" / "kvantum.kvconfig"
