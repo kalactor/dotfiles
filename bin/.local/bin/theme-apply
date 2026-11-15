@@ -21,6 +21,7 @@ mkdir -p "$HOME/.cache/rice"
 # Serialize theme generation: the timer and a keybind can race.
 exec 9>"$HOME/.cache/rice/theme.lock"
 flock -w 60 9 || { notify-send -u critical "theme-apply" "Timed out waiting for theme lock"; exit 1; }
+previous_mode=$(cat "$HOME/.cache/rice/theme-mode" 2>/dev/null || true)
 
 failures=()
 record_failure() {
@@ -86,7 +87,9 @@ if [ -f "$hl_colors" ]; then
   [ -n "$clock_hex" ] && printf '$clock = rgba(%s)\n' "$clock_hex" >> "$hl_colors"
 fi
 
-# 2. GTK 3/4 follow gsettings on Wayland (settings.ini is ignored there).
+# 2. GTK 3/4 read theme, icons, font, and cursor from gsettings through the
+# XDG settings portal. settings.ini deliberately pins none of those values:
+# a static Adwaita-dark or prefer-dark would leak into light mode.
 if command -v gsettings >/dev/null 2>&1; then
   gtk_failed=0
   if [ "$mode" = "light" ]; then
@@ -181,7 +184,23 @@ if hyprctl monitors >/dev/null 2>&1; then
   hyprctl reload >/dev/null 2>&1 || record_failure "Hyprland reload failed"
 fi
 pkill -SIGUSR1 kitty 2>/dev/null || true        # kitty reloads its config
-swaync-client -rs >/dev/null 2>&1 || true       # SwayNC reloads CSS
+# SwayNC reads the GTK theme only at startup.  -rs reloads its CSS but keeps a
+# stale light/dark base, so restart it when the mode actually changes.  A
+# restart needs a live compositor: outside Hyprland (CI, smoke tests, a TTY)
+# leave the running instance alone instead of reporting a false failure.
+if pgrep -x swaync >/dev/null 2>&1; then
+  if [ "$mode" != "$previous_mode" ] && hyprctl monitors >/dev/null 2>&1; then
+    pkill -x swaync 2>/dev/null || true
+    for _ in $(seq 1 20); do
+      pgrep -x swaync >/dev/null 2>&1 || break
+      sleep 0.1
+    done
+    hyprctl dispatch 'hl.dsp.exec_cmd("swaync")' >/dev/null 2>&1 \
+      || record_failure "could not restart SwayNC after the mode change"
+  elif [ "$mode" = "$previous_mode" ]; then
+    swaync-client -rs >/dev/null 2>&1 || true   # same mode: CSS reload is enough
+  fi
+fi
 pkill -USR2 -x btop 2>/dev/null || true         # btop re-reads config + active theme
 [ -f "$HOME/.config/cava/config" ] && touch "$HOME/.config/cava/config"  # cava live-config reload
 # Waybar watches style.css for changes and reloads its imported colors.css.
