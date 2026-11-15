@@ -13,7 +13,7 @@ local vars = {
     -- Gaps and borders
     gaps_in                = 4,
     gaps_out               = 8,
-    single_window_gaps_out = 20,
+    single_window_gaps_out = 10,
     border_size            = 2,
     rounding               = 10,
     rounding_power         = 2,
