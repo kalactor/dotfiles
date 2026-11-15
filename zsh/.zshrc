@@ -91,3 +91,10 @@ fi
 # its styles replace the plugin defaults.
 source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 [[ -r "$HOME/.cache/rice/zsh-colors.zsh" ]] && source "$HOME/.cache/rice/zsh-colors.zsh"
+
+# bun completions
+[ -s "/home/amit/.bun/_bun" ] && source "/home/amit/.bun/_bun"
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"

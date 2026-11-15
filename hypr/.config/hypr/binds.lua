@@ -88,6 +88,8 @@ bind(mainMod .. " + SHIFT + V", hl.dsp.exec_cmd("$HOME/.local/bin/rice-clipboard
 bind(mainMod .. " + SHIFT + C", hl.dsp.exec_cmd("hyprpicker -a"), "Color picker")
 bind(mainMod .. " + SHIFT + F10", hl.dsp.exec_cmd("$HOME/.local/bin/rice-nightlight"), "Toggle night light")
 bind(mainMod .. " + F9", hl.dsp.exec_cmd("$HOME/.local/bin/gsr-toggle"), "Toggle screen recording")
+-- VoiceFlow dictation: hold to record, release to transcribe.
+bind("CTRL + SHIFT + F12", hl.dsp.global("com.voiceflow.app:voiceflow-record"), "VoiceFlow: hold to dictate")
 
 -- Wallpaper selection always stays inside the effective light/dark directory.
 bind("SUPER + F6", hl.dsp.exec_cmd("$HOME/.local/bin/wall next"), "Next wallpaper")

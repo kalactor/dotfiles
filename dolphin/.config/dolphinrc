@@ -22,9 +22,9 @@ Version=202
 
 [IconsMode]
 CompactSpacing=true
-IconSize=48
+IconSize=80
 MaximumTextLines=1
-PreviewSize=48
+PreviewSize=80
 
 [InformationPanel]
 dateFormat=ShortFormat

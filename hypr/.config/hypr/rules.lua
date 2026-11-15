@@ -91,6 +91,31 @@ hl.window_rule({
     keep_aspect_ratio = true,
 })
 
+-- VoiceFlow's recording pill.  It must stay a tiny floating window and must
+-- never take focus: otherwise the compositor tiles it and wtype pastes the
+-- transcript into the pill instead of the app the user was typing in.
+hl.window_rule({
+    name = "voiceflow-overlay",
+    match = { class = "^voiceflow-tauri$", title = "^VoiceFlow Overlay$" },
+    float = true,
+    no_focus = true,
+    size = "200 44",
+    move = "(monitor_w*0.5-window_w*0.5) (monitor_h-window_h-48)",
+    border_size = 0,
+    no_shadow = true,
+    no_anim = true,
+    no_blur = true,
+    no_dim = true,
+    -- Clip the (otherwise rectangular) WebKitGTK surface into the capsule
+    -- shape: 22 = half of the 44px overlay height.
+    rounding = 22,
+    -- The pill never takes focus, so the global inactive_opacity (0.85)
+    -- would permanently wash it out / tint the transparent window. The
+    -- `override` keywords are required: without them the global
+    -- decoration opacity still multiplies over this rule.
+    opacity = "1.0 override 1.0 override",
+})
+
 ---------------------
 ---- Tagged rules ----
 ---------------------
