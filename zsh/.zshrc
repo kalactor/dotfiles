@@ -18,9 +18,15 @@ bindkey -e
 bindkey '^H' backward-kill-word
 bindkey '^[[1;5D' backward-word
 bindkey '^[[1;5C' forward-word
+# Delete deletes the character under the cursor; Ctrl+Delete kills the next
+# word.  kitty encodes them as CSI 3~ and CSI 3;5~.
+bindkey '^[[3~' delete-char
+bindkey '^[[3;5~' kill-word
 # Alt+arrows are unbound by default; use them for word movement too.
 bindkey '^[[1;3D' backward-word
 bindkey '^[[1;3C' forward-word
+# Alt+Delete mirrors Alt+Backspace for the next word.
+bindkey '^[[3;3~' kill-word
 
 # Completion
 zmodload zsh/complist
