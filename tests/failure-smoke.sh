@@ -10,9 +10,12 @@ trap 'rm -rf "$work"' EXIT
 home="$work/home"
 stub="$work/stub"
 mkdir -p "$home/.local/bin" "$home/Pictures/walls/light" "$stub" \
-    "$home/.config/wallust/templates"
+    "$home/.config/matugen/templates" "$home/.config/wallust/templates"
+printf '[config]\n' > "$home/.config/matugen/config.toml"
+printf 'background={{ background }}\n' > "$home/.config/matugen/templates/palette.env"
+# The shared application templates live in the legacy wallust package; an
+# empty manifest keeps rice-contrast quiet when this isolated HOME has none.
 printf '[templates]\n' > "$home/.config/wallust/wallust.toml"
-printf 'background={{ background }}\n' > "$home/.config/wallust/templates/palette.env"
 printf 'fixture\n' > "$home/wall.jpg"
 printf 'fixture\n' > "$home/Pictures/walls/light/a.jpg"
 
@@ -20,21 +23,13 @@ for command in gsettings swaync-client notify-send pkill; do
     printf '#!/bin/sh\nexit 0\n' > "$stub/$command"
     chmod +x "$stub/$command"
 done
-# wallust normally renders the base palette, then prints a separate ANSI scheme.
-# The stub keeps both contracts without needing an image decoder.
-cat > "$stub/wallust" <<'EOF'
+# matugen normally renders the base palette and Material roles into
+# ~/.cache/rice/matugen.env.  The stub keeps that contract without needing an
+# image decoder.
+cat > "$stub/matugen" <<'EOF'
 #!/bin/sh
-case " $* " in
-  *" --print-scheme "*)
-    for colour in '#2e3936' '#b7393e' '#00733b' '#989b00' '#0058bf' '#bf0071' \
-                  '#00b7bf' '#fff7db' '#505a57' '#f44d53' '#00994f' '#cbcf00' \
-                  '#0075ff' '#ff0096' '#00f4ff' '#fff7db'; do
-      printf '%s\n' "$colour"
-    done
-    ;;
-  *)
-    mkdir -p "$HOME/.cache/rice"
-    cat > "$HOME/.cache/rice/colors.env" <<'PALETTE'
+mkdir -p "$HOME/.cache/rice"
+cat > "$HOME/.cache/rice/matugen.env" <<'PALETTE'
 background=#C7B9B9
 foreground=#6B6E33
 cursor=#867F2A
@@ -55,11 +50,9 @@ color13=#FA9871
 color14=#EEF572
 color15=#242511
 PALETTE
-    ;;
-esac
 exit 0
 EOF
-chmod +x "$stub/wallust"
+chmod +x "$stub/matugen"
 cp "$ROOT/bin/.local/bin/rice-contrast" "$home/.local/bin/rice-contrast"
 chmod +x "$home/.local/bin/rice-contrast"
 printf '#!/bin/sh\nexit 1\n' > "$stub/hyprctl"

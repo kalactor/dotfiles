@@ -9,7 +9,7 @@ bad() { failures=$((failures + 1)); printf '  \033[31m✘\033[0m %s\n' "$1"; }
 warn(){ warnings=$((warnings + 1)); printf '  \033[33m•\033[0m %s\n' "$1"; }
 
 echo "Commands:"
-for c in hyprctl waybar swaync swaync-client rofi wlogout wallust hyprpaper \
+for c in hyprctl waybar swaync swaync-client rofi wlogout matugen hyprpaper \
          hyprlock hypridle sddm kitty vim grim slurp satty wl-copy cliphist \
          gpu-screen-recorder swayimg jq notify-send powerprofilesctl pamixer \
          gnome-keyring-daemon hyprsunset swayosd-server ddcutil hyprpicker \
@@ -64,7 +64,7 @@ for f in "$HOME/.config/waybar/colors.css" \
          "$HOME/.cache/rice/Colors.qml" \
          "$HOME/.config/wlogout/colors.css" \
          "$HOME/.cache/rice/colors.env" \
-         "$HOME/.cache/rice/ansi-scheme" \
+         "$HOME/.cache/rice/matugen.env" \
          "$HOME/.cache/rice/telegram.tdesktop-theme" \
          "$HOME/.local/share/rice/telegram-base.tdesktop-palette" \
          "$HOME/.config/kdeglobals" \
@@ -83,9 +83,10 @@ else
 fi
 
 echo "Symlinks:"
-for p in hypr waybar kitty swaync rofi wallust swayimg wlogout rice btop cava; do
+for p in hypr waybar kitty swaync rofi matugen swayimg wlogout rice btop cava; do
     [ -L "$HOME/.config/$p" ] && ok "~/.config/$p -> $(readlink "$HOME/.config/$p")" || bad "~/.config/$p is not a symlink"
 done
+[ -L "$HOME/.config/wallust" ] && ok "~/.config/wallust (fallback)" || warn "legacy wallust config not stowed (fallback unavailable)"
 [ -L "$HOME/.vimrc" ] && ok "~/.vimrc -> $(readlink "$HOME/.vimrc")" || bad "~/.vimrc is not a symlink"
 [ -L "$HOME/.config/mpv/mpv.conf" ] && ok "~/.config/mpv/mpv.conf -> $(readlink "$HOME/.config/mpv/mpv.conf")" || bad "~/.config/mpv/mpv.conf is not a symlink"
 [ -L "$HOME/.config/chrome-flags.conf" ] && ok "~/.config/chrome-flags.conf -> $(readlink "$HOME/.config/chrome-flags.conf")" || bad "~/.config/chrome-flags.conf is not a symlink"

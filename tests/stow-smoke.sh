@@ -9,7 +9,7 @@ target=$(mktemp -d "$TMP_BASE/rice-stow.XXXXXXXX")
 trap 'rm -rf "$target"' EXIT
 
 packages=(
-    bash bin btop cava chrome dolphin fastfetch gtk hypr kitty mpv rice rofi
+    bash bin btop cava chrome dolphin fastfetch gtk hypr kitty matugen mpv rice rofi
     swayimg swaync telegram vim wallust waybar wlogout zsh
 )
 
@@ -23,6 +23,8 @@ for path in \
     .config/hypr \
     .config/waybar \
     .config/kitty \
+    .config/matugen/config.toml \
+    .config/matugen/templates/palette.env \
     .config/rofi \
     .config/rofi/emoji.tsv \
     .local/bin \
@@ -67,5 +69,9 @@ grep -q 'windowsMove' "$target/.config/hypr/look.lua"
 grep -q 'specialWorkspace' "$target/.config/hypr/look.lua"
 grep -q 'logout_dialog' "$target/.config/hypr/rules.lua"
 grep -q 'wlogout-tile-in' "$target/.config/wlogout/style.css"
+
+# matugen is the active palette engine; wallust remains the fallback.
+grep -q 'RICE_THEME_ENGINE:-matugen' "$target/.local/bin/theme-apply"
+grep -q 'colors.surface_container_low' "$target/.config/matugen/templates/palette.env"
 
 printf 'stow-smoke: all %d packages restored into an isolated HOME; numeric workspaces intact\n' "${#packages[@]}"

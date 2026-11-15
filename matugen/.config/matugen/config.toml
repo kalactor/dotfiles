@@ -1,0 +1,22 @@
+# Matugen — Material You palette for the rice.
+#
+# theme-apply runs:
+#   matugen image WALLPAPER -m light|dark -c ~/.config/matugen/config.toml
+#
+# This config renders only the base palette.  rice-contrast then enforces the
+# contrast policy and renders the shared application templates.
+[config]
+version_check = false
+caching = false
+# Pick the most saturated source colour instead of prompting on a TTY.
+prefer = "saturation"
+fallback_color = "#ffbf9b"
+
+# wall already owns hyprpaper; no wallpaper hook is configured here.
+
+[templates.palette]
+input_path = "~/.config/matugen/templates/palette.env"
+output_path = "~/.cache/rice/matugen.env"
+# Material 3's balanced default.  Change to SchemeContent, SchemeVibrant,
+# SchemeExpressive, SchemeFidelity, ... to compare palettes.
+type = "SchemeTonalSpot"

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # usage: theme-apply IMAGE [light|dark]
-# One wallpaper change recolors every app: wallust -> all templates -> reload.
+# One wallpaper change recolors every app: matugen -> rice-contrast -> reload.
+# Set RICE_THEME_ENGINE=wallust to use the legacy wallust engine.
 # If MODE is omitted, ~/.cache/rice/effective-mode is used (dark as fallback).
 set -uo pipefail
 
@@ -29,48 +30,92 @@ record_failure() {
     printf 'theme-apply: %s\n' "$1" >&2
 }
 
-# 1. Generate the base palette with wallust.  The full wallust.toml also
-# lists semantic templates that wallust cannot render (it only knows the
-# base keys), so render the base palette through a minimal config first.
-# rice-contrast renders the full manifest after contrast enforcement.
-base_dir="$HOME/.cache/rice/wallust-base"
-rm -rf "$base_dir"
-mkdir -p "$base_dir/templates"
-if ! cp "$HOME/.config/wallust/templates/palette.env" "$base_dir/templates/palette.env"; then
-  notify-send -u critical "theme-apply" "wallust palette template missing"
-  exit 1
-fi
-printf "[templates]\npalette.template = 'palette.env'\npalette.target = '%s'\n" \
-  "$HOME/.cache/rice/colors.env" > "$base_dir/wallust.toml"
-if ! wallust run --config-dir "$base_dir" --skip-sequences --palette "$mode" "$img" >/dev/null 2>&1; then
-  notify-send -u critical "theme-apply" "wallust failed for $img ($mode)"
-  exit 1
-fi
+# 1. Generate the base palette.  matugen is the default engine; set
+# RICE_THEME_ENGINE=wallust to use the legacy wallust path.  Both engines
+# write the base palette to ~/.cache/rice/colors.env; rice-contrast then
+# enforces contrast and renders every application template.
+engine="${RICE_THEME_ENGINE:-matugen}"
+ansi_scheme=""
 
-# 1b. Ask wallust for ANSI-preserving hues (red/green/yellow/blue/...), then
-# let rice-contrast enforce WCAG contrast against the composited terminal
-# background and re-render every template with semantic colours.  The second
-# wallust call only prints a palette; it does not touch templates or the
-# current terminal.
-ansi_scheme="$HOME/.cache/rice/ansi-scheme"
-rm -f "$ansi_scheme"
-if wallust run --quiet --skip-templates --skip-sequences --print-scheme --no-cache \
-     --palette ansidark16 --colorspace lchansi "$img" > "$ansi_scheme.tmp" 2>/dev/null; then
-  mv -f "$ansi_scheme.tmp" "$ansi_scheme"
-else
-  rm -f "$ansi_scheme.tmp"
-  record_failure "wallust ANSI palette generation failed"
-fi
+case "$engine" in
+  matugen)
+    matugen_config="$HOME/.config/matugen/config.toml"
+    matugen_env="$HOME/.cache/rice/matugen.env"
+    if ! command -v matugen >/dev/null 2>&1; then
+      notify-send -u critical "theme-apply" "matugen is not installed"
+      exit 1
+    fi
+    if [ ! -f "$matugen_config" ]; then
+      notify-send -u critical "theme-apply" "matugen config missing: $matugen_config"
+      exit 1
+    fi
+    rm -f "$matugen_env"
+    matugen_args=(image "$img" -m "$mode" -c "$matugen_config" --quiet)
+    if [ -n "${RICE_MATUGEN_TYPE:-}" ]; then
+      matugen_args+=(-t "$RICE_MATUGEN_TYPE")
+    fi
+    if ! matugen "${matugen_args[@]}" >/dev/null 2>&1; then
+      notify-send -u critical "theme-apply" "matugen failed for $img ($mode)"
+      exit 1
+    fi
+    if [ ! -s "$matugen_env" ]; then
+      notify-send -u critical "theme-apply" "matugen did not render $matugen_env"
+      exit 1
+    fi
+    if ! cp -f "$matugen_env" "$HOME/.cache/rice/colors.env"; then
+      notify-send -u critical "theme-apply" "could not stage the matugen palette"
+      exit 1
+    fi
+    ;;
+  wallust)
+    # The full wallust.toml also lists semantic templates that wallust cannot
+    # render (it only knows the base keys), so render the base palette through
+    # a minimal config first.  rice-contrast renders the full manifest after
+    # contrast enforcement.
+    base_dir="$HOME/.cache/rice/wallust-base"
+    rm -rf "$base_dir"
+    mkdir -p "$base_dir/templates"
+    if ! cp "$HOME/.config/wallust/templates/palette.env" "$base_dir/templates/palette.env"; then
+      notify-send -u critical "theme-apply" "wallust palette template missing"
+      exit 1
+    fi
+    printf "[templates]\npalette.template = 'palette.env'\npalette.target = '%s'\n" \
+      "$HOME/.cache/rice/colors.env" > "$base_dir/wallust.toml"
+    if ! wallust run --config-dir "$base_dir" --skip-sequences --palette "$mode" "$img" >/dev/null 2>&1; then
+      notify-send -u critical "theme-apply" "wallust failed for $img ($mode)"
+      exit 1
+    fi
+
+    # Ask wallust for ANSI-preserving hues (red/green/yellow/blue/...).  The
+    # second call only prints a palette; it does not touch templates or the
+    # current terminal.
+    ansi_scheme="$HOME/.cache/rice/ansi-scheme"
+    rm -f "$ansi_scheme"
+    if wallust run --quiet --skip-templates --skip-sequences --print-scheme --no-cache \
+         --palette ansidark16 --colorspace lchansi "$img" > "$ansi_scheme.tmp" 2>/dev/null; then
+      mv -f "$ansi_scheme.tmp" "$ansi_scheme"
+    else
+      rm -f "$ansi_scheme.tmp"
+      record_failure "wallust ANSI palette generation failed"
+    fi
+    ;;
+  *)
+    notify-send -u critical "theme-apply" "Unknown RICE_THEME_ENGINE: $engine"
+    exit 1
+    ;;
+esac
 
 if [ -x "$HOME/.local/bin/rice-contrast" ]; then
-  if ! "$HOME/.local/bin/rice-contrast" --image "$img" --mode "$mode" --ansi "$ansi_scheme"; then
+  contrast_args=(--image "$img" --mode "$mode")
+  [ -n "$ansi_scheme" ] && contrast_args+=(--ansi "$ansi_scheme")
+  if ! "$HOME/.local/bin/rice-contrast" "${contrast_args[@]}"; then
     record_failure "contrast enforcement failed"
   fi
 else
   record_failure "rice-contrast missing"
 fi
 
-# wallust's vim template does not know about the mode; fix the background so
+# The vim template does not know about the mode; fix the background so
 # light palettes do not get dark-mode syntax defaults.
 if [ -f "$HOME/.vim/colors/wallust.vim" ]; then
   sed -i "s/^set background=.*/set background=$mode/" "$HOME/.vim/colors/wallust.vim"
@@ -131,7 +176,7 @@ EOF
 fi
 
 # KDE reads the generated colour scheme; Kvantum paints its own surfaces and
-# selection from the theme SVG, so kde-theme bakes the wallust palette into both.
+# selection from the theme SVG, so kde-theme bakes the active palette into both.
 if [ -x "$HOME/.local/bin/kde-theme" ] && "$HOME/.local/bin/kde-theme" "$mode"; then
   :
 else

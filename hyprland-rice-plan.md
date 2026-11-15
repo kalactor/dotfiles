@@ -10,7 +10,7 @@
 - `[ ]` = to do (if it says *(provided, verify)* the config exists, but it is not confirmed yet)
 - Package names: check with `pacman -Ss <name>`; if not found, try the AUR (`paru -S` / `yay -S`).
 
-> **Current status, 2026-11-14:** core rice, SDDM, wallust, sunrise/sunset,
+> **Current status, 2026-11-16:** core rice, SDDM, matugen, sunrise/sunset,
 > Dolphin/KDE/Kvantum, wlogout and Telegram are complete. The reliability,
 > modularization and restoration milestones are now also implemented: failures
 > propagate, `rice-doctor` has exit codes, `rice-resume` repairs Waybar after
@@ -63,7 +63,7 @@
 
 - Hyprland Lua config loads with no errors; monitors are positioned correctly; numlock is on; float rules for Satty/swayimg/pavucontrol/Blueman work.
 - Screenshots (grim + slurp + Satty), screen recording (gpu-screen-recorder + Waybar indicator), wallpaper script, Waybar, SwayNC, hyprpaper and hypridle are running.
-- wallust generates 16 targets from one wallpaper: Waybar, SwayNC, Hyprland, hyprlock, kitty, rofi, GTK 3/4, vim, wlogout, starship, btop, cava, SDDM, swayimg, and machine-readable palette files. `rice-contrast` then enforces WCAG contrast against the composited terminal background and re-renders the semantic templates.
+- matugen (Material You) is now the active palette engine and generates a base palette plus semantic Material roles from one wallpaper; `rice-contrast` enforces WCAG contrast against the composited terminal background and renders 17 application templates. The previous wallust path remains available with `RICE_THEME_ENGINE=wallust` for side-by-side comparison.
 - Audio (PipeWire/WirePlumber), NetworkManager, Bluetooth, CUPS, zram swap, timezone/NTP and GNOME keyring PAM unlock work.
 - vim is the default text editor; kitty is the terminal; SDDM successfully starts Hyprland.
 

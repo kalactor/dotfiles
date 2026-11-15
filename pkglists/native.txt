@@ -57,6 +57,7 @@ libvirt
 linux
 linux-firmware
 lua-language-server
+matugen
 mkinitcpio
 mpv
 mpv-mpris

@@ -171,6 +171,35 @@ class PaletteTests(unittest.TestCase):
         self.assertEqual(self.rc.check_palette(palette, "#211719"), [])
         self.assertGreaterEqual(self.rc.contrast(palette["foreground"], "#211719"), 6.95)
 
+    def test_material_roles_from_matugen_are_preserved(self):
+        material = dict(BASE_DARK)
+        material.update(
+            {
+                "surface": "#231917",
+                "surface_alt": "#271d1b",
+                "surface_fg": "#f1dfda",
+                "bar_bg": "#271d1b",
+                "bar_fg": "#f1dfda",
+                "muted": "#d8c2bc",
+                "border": "#a08c88",
+                "accent": "#ffb4a1",
+                "accent_alt": "#d9c58d",
+                "danger": "#ffb4ab",
+                "success": "#a1ffc8",
+                "warning": "#d8ffa1",
+                "info": "#a1e8ff",
+                "link": "#b9a1ff",
+            }
+        )
+        palette = self.rc.compute_palette(material, None, "#211719")
+        self.assertEqual(self.rc.check_palette(palette, "#211719"), [])
+        self.assertEqual(palette["surface"], "#231917")
+        self.assertEqual(palette["surface_alt"], "#271d1b")
+        self.assertEqual(palette["bar_bg"], "#271d1b")
+        self.assertEqual(palette["accent_source"], "#ffb4a1")
+        self.assertEqual(palette["accent_alt_source"], "#d9c58d")
+        self.assertEqual(palette["danger"], "#ffb4ab")
+
     def test_semantic_keys_are_derived_from_the_wallpaper_palette(self):
         palette = self.rc.compute_palette(BASE_LIGHT, ANSI_LIGHT, "#baadaa")
         for key in (
