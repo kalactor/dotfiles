@@ -205,4 +205,6 @@ hl.workspace_rule({ workspace = "f[1]s[false]", gaps_out = vars.single_window_ga
 
 hl.layer_rule({ name = "rofi-blur", match = { namespace = "^rofi$" }, blur = true })
 hl.layer_rule({ name = "swaync-blur", match = { namespace = "^swaync" }, blur = true })
-hl.layer_rule({ name = "wlogout-blur", match = { namespace = "^wlogout$" }, blur = true })
+-- wlogout 1.2.x uses the "logout_dialog" layer namespace.
+hl.layer_rule({ name = "wlogout-blur", match = { namespace = "^logout_dialog$" }, blur = true })
+hl.layer_rule({ name = "wlogout-animation", match = { namespace = "^logout_dialog$" }, animation = "fade" })

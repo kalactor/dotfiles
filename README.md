@@ -310,6 +310,14 @@ rice-screenshot full
 rice-screenshot ocr
 ```
 
+### Animations
+
+Hyprland uses a Material 3-inspired preset: spring-based window movement,
+crisp pop-in/out for windows, slide-fade workspace changes, slide-fade special
+workspaces, and fading layers. wlogout is matched on its real `logout_dialog`
+layer namespace, so its backdrop is blurred and the overlay fades in; its tiles
+also transition and stagger in.
+
 ## Health / restart
 
 ```bash
