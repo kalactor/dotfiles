@@ -15,7 +15,7 @@ rice-mode status
 
 | Path | Contents |
 |---|---|
-| `hypr/.config/hypr/` | modular Lua config (`hyprland.lua` + `monitors`, `env`, `look`, `input`, `autostart`, `binds`, `rules`), `hyprlock.conf`, `hyprpaper.conf` |
+| `hypr/.config/hypr/` | modular Lua config (`hyprland.lua` + `monitors`, `env`, `look`, `input`, `autostart`, `binds`, `rules`, `workspaces`), `hyprlock.conf`, `hyprpaper.conf` |
 | `waybar/.config/waybar/` | bar config + CSS (imports generated `colors.css`) |
 | `swaync/.config/swaync/` | notification daemon + CSS |
 | `rofi/.config/rofi/` | launcher (imports generated `colors.rasi`) |
@@ -265,7 +265,19 @@ Mode state lives in `~/.cache/rice/`: `mode`, `effective-mode`, `location`,
 | `Super+Ctrl+C` | calculator (result copies to clipboard) |
 | `Super+Ctrl+E` | emoji picker |
 | `Super+A` | rofi launcher |
-| `Super+N` / `Super+Shift+N` | notifications / DND |
+| `Super+N` / `Super+Shift+N` / `Super+Ctrl+N` | notifications / DND / clear all |
+| `Super+Tab` / `Super+Shift+Tab` | next / previous window |
+| `Super+Ctrl+Left` / `Super+Ctrl+Right` | previous / next workspace (wraps 1–10) |
+| `Super+Alt+1…0` | move window silently to workspace 1–10 |
+| `Super+Shift+Arrows` | resize window in 5% steps |
+| `Super+Ctrl+Shift+Arrows` | swap window with neighbour |
+| `Super+Alt+Shift+Arrows` | move window in a direction |
+| `Super+G` / `Super+Ctrl+G` | toggle / lock window group |
+| `Super+Ctrl+W` | reveal a swallowed terminal |
+| `Super+Shift+R` | reload Hyprland config |
+| `Print` / `Shift+Print` | screenshot region / all screens |
+| `Super+Print` / `Super+Shift+Print` | screenshot output-or-region / window |
+| `Super+Shift+O` | OCR a region into the clipboard |
 | `Super+Shift+V` | clipboard history |
 | `Super+Shift+C` | color picker |
 | `Super+L` | lock (hyprlock) |
@@ -281,6 +293,22 @@ Mode state lives in `~/.cache/rice/`: `mode`, `effective-mode`, `location`,
 
 Waybar runs **only on `DP-3`**. Workspaces stay strictly numeric: 1–5 live
 there; 6–10 on `HDMI-A-1`.
+
+### Screenshots and OCR
+
+`rice-screenshot` saves to `~/Pictures/Screenshots` (override with
+`RICE_SCREENSHOT_DIR`), copies the image to the clipboard, and offers an
+**Annotate** action that opens Satty. The OCR mode uses Tesseract with English
+and Hindi when available, copies the recognized text, and keeps the source
+image. It can also be run directly:
+
+```bash
+rice-screenshot region
+rice-screenshot output
+rice-screenshot window
+rice-screenshot full
+rice-screenshot ocr
+```
 
 ## Health / restart
 

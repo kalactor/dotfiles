@@ -44,6 +44,8 @@ hl.config({
 
     binds = {
         scroll_event_delay = 0,
+        -- Re-selecting the active workspace returns to the previous one.
+        workspace_back_and_forth = true,
     },
 
     misc = {
@@ -55,6 +57,10 @@ hl.config({
         mouse_move_enables_dpms = true,
         key_press_enables_dpms = true,
         focus_on_activate = true,
+        -- Hide kitty while a GUI app launched from it is open; the terminal
+        -- returns when that app exits.  SUPER+CTRL+W reveals it manually.
+        enable_swallow = true,
+        swallow_regex = "^(kitty)$",
     },
 })
 

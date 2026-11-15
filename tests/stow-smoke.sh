@@ -30,6 +30,7 @@ for path in \
     .local/bin/rice-keybinds \
     .local/bin/rice-calculator \
     .local/bin/rice-emoji \
+    .local/bin/rice-screenshot \
     .local/bin/rice-contrast \
     .local/share/rice/telegram-base.tdesktop-palette \
     .config/systemd/user/rice-sun.timer \
@@ -42,7 +43,7 @@ for path in \
     fi
 done
 
-for module in monitors env look input autostart binds rules; do
+for module in monitors env look input autostart binds rules workspaces; do
     if [ ! -f "$target/.config/hypr/$module.lua" ]; then
         printf 'stow-smoke: missing Hyprland module %s\n' "$module" >&2
         exit 1
@@ -54,5 +55,7 @@ grep -q 'workspace = tostring(workspace)' "$target/.config/hypr/monitors.lua"
 for workspace in $(seq 1 10); do
     grep -q "\"$workspace\": \"$workspace\"" "$target/.config/waybar/config.jsonc"
 done
+grep -q 'rice-screenshot' "$target/.config/hypr/binds.lua"
+grep -q '"custom/notification"' "$target/.config/waybar/config.jsonc"
 
 printf 'stow-smoke: all %d packages restored into an isolated HOME; numeric workspaces intact\n' "${#packages[@]}"

@@ -1,6 +1,7 @@
-local vars    = require("vars")
-local special = require("special")
-local window  = require("window")
+local vars       = require("vars")
+local special    = require("special")
+local window     = require("window")
+local workspaces = require("workspaces")
 
 local mainMod = vars.workspace_mod
 local terminal = vars.terminal
@@ -26,6 +27,7 @@ bind(mainMod .. " + M", hl.dsp.exec_cmd("hyprshutdown"), "Exit Hyprland")
 bind(mainMod .. " + F1", hl.dsp.exec_cmd("$HOME/.local/bin/rice-keybinds"), "Keybind cheatsheet")
 bind(mainMod .. " + CTRL + C", hl.dsp.exec_cmd("$HOME/.local/bin/rice-calculator"), "Calculator")
 bind(mainMod .. " + CTRL + E", hl.dsp.exec_cmd("$HOME/.local/bin/rice-emoji"), "Emoji picker")
+bind(mainMod .. " + SHIFT + R", hl.dsp.reload_config(), "Reload Hyprland config")
 
 -- Window management
 bind(mainMod .. " + Q", hl.dsp.window.close(), "Close window")
@@ -35,12 +37,38 @@ bind(mainMod .. " + J", hl.dsp.layout("togglesplit"), "Toggle split")
 bind(mainMod .. " + F", hl.dsp.window.fullscreen({ mode = "fullscreen" }), "Toggle fullscreen")
 bind(mainMod .. " + ALT + F", hl.dsp.window.fullscreen({ mode = "maximized" }), "Toggle maximized")
 bind(mainMod .. " + SHIFT + P", hl.dsp.window.pin(), "Toggle pinned window")
+bind(mainMod .. " + Tab", hl.dsp.window.cycle_next(), "Next window")
+bind(mainMod .. " + SHIFT + Tab", hl.dsp.window.cycle_next({ next = false }), "Previous window")
+
+-- Window groups (tabbed containers).
+bind(mainMod .. " + G", hl.dsp.group.toggle(), "Toggle window group")
+bind(mainMod .. " + CTRL + G", hl.dsp.group.lock(), "Lock or unlock window group")
+bind(mainMod .. " + SHIFT + G", hl.dsp.window.move({ out_of_group = true }), "Move window out of group")
+bind(mainMod .. " + bracketleft", hl.dsp.group.prev(), "Previous window in group")
+bind(mainMod .. " + bracketright", hl.dsp.group.next(), "Next window in group")
+
+-- Reveal a terminal hidden by window swallowing.
+bind(mainMod .. " + CTRL + W", hl.dsp.window.toggle_swallow(), "Reveal swallowed windows")
 
 -- Relative resizing (10% steps, repeat while held).
 bind(mainMod .. " + Minus", window.resize_active_window(-10, 0), "Decrease window width", { repeating = true })
 bind(mainMod .. " + Equal", window.resize_active_window(10, 0), "Increase window width", { repeating = true })
 bind(mainMod .. " + SHIFT + Minus", window.resize_active_window(0, -10), "Decrease window height", { repeating = true })
 bind(mainMod .. " + SHIFT + Equal", window.resize_active_window(0, 10), "Increase window height", { repeating = true })
+
+-- Arrow-key resizing in finer 5% steps.
+bind(mainMod .. " + SHIFT + left", window.resize_active_window(-5, 0), "Resize window narrower", { repeating = true })
+bind(mainMod .. " + SHIFT + right", window.resize_active_window(5, 0), "Resize window wider", { repeating = true })
+bind(mainMod .. " + SHIFT + up", window.resize_active_window(0, -5), "Resize window shorter", { repeating = true })
+bind(mainMod .. " + SHIFT + down", window.resize_active_window(0, 5), "Resize window taller", { repeating = true })
+
+-- Swap or move the focused window relative to its neighbours.
+for _, direction in ipairs({ "left", "right", "up", "down" }) do
+    bind(mainMod .. " + CTRL + SHIFT + " .. direction, hl.dsp.window.swap({ direction = direction }), "Swap window " .. direction)
+    bind(mainMod .. " + ALT + SHIFT + " .. direction, hl.dsp.window.move({ direction = direction }), "Move window " .. direction)
+end
+bind(mainMod .. " + CTRL + ALT + left", hl.dsp.window.move({ monitor = "l" }), "Move window to monitor left")
+bind(mainMod .. " + CTRL + ALT + right", hl.dsp.window.move({ monitor = "r" }), "Move window to monitor right")
 
 bind("CTRL + SUPER + Backslash", hl.dsp.window.center(), "Center window")
 bind("CTRL + SUPER + ALT + Backslash", window.normalize, "Resize to 55x70% and center")
@@ -55,6 +83,7 @@ bind(mainMod .. " + D", special.toggle("communication"), "Communication workspac
 -- Notifications, utilities and capture
 bind(mainMod .. " + N", hl.dsp.exec_cmd("swaync-client -t"), "Notification center")
 bind(mainMod .. " + SHIFT + N", hl.dsp.exec_cmd("swaync-client -d"), "Toggle do not disturb")
+bind(mainMod .. " + CTRL + N", hl.dsp.exec_cmd("swaync-client -C"), "Clear notifications")
 bind(mainMod .. " + SHIFT + V", hl.dsp.exec_cmd("$HOME/.local/bin/rice-clipboard"), "Clipboard history")
 bind(mainMod .. " + SHIFT + C", hl.dsp.exec_cmd("hyprpicker -a"), "Color picker")
 bind(mainMod .. " + SHIFT + F10", hl.dsp.exec_cmd("$HOME/.local/bin/rice-nightlight"), "Toggle night light")
@@ -72,10 +101,12 @@ bind("SUPER + CTRL + D", hl.dsp.exec_cmd("$HOME/.local/bin/rice-mode dark"), "Fo
 bind("SUPER + CTRL + A", hl.dsp.exec_cmd("$HOME/.local/bin/rice-mode auto"), "Automatic light/dark mode")
 bind("SUPER + CTRL + T", hl.dsp.exec_cmd("$HOME/.local/bin/rice-mode toggle"), "Toggle forced light/dark mode")
 
-bind("Print", hl.dsp.exec_cmd('mkdir -p ~/Pictures/Screenshots; f=/tmp/shot-$(date +%s).png; g=$(slurp) || exit; grim -g "$g" "$f" && wl-copy -t image/png < "$f" && [ "$(notify-send -i "$f" -A default="Open in Satty" "Screenshot copied" "Click to annotate")" = default ] && satty -f "$f" --copy-command wl-copy --early-exit -o "$HOME/Pictures/Screenshots/%Y%m%d_%H%M%S.png"'), "Screenshot: select region and annotate")
-bind("SHIFT + Print", hl.dsp.exec_cmd('mkdir -p ~/Pictures/Screenshots; f=$HOME/Pictures/Screenshots/$(date +%Y%m%d_%H%M%S).png; grim "$f" && wl-copy -t image/png < "$f" && [ "$(notify-send -i "$f" -A default="Open in Satty" "Screenshot saved" "$f")" = default ] && satty -f "$f" --copy-command wl-copy --early-exit -o "$HOME/Pictures/Screenshots/%Y%m%d_%H%M%S-edited.png"'), "Screenshot: all screens")
-bind(mainMod .. " + Print", hl.dsp.exec_cmd('mkdir -p ~/Pictures/Screenshots; f=$HOME/Pictures/Screenshots/$(date +%Y%m%d_%H%M%S).png; g=$(slurp -o -r) || exit; grim -g "$g" "$f" && wl-copy -t image/png < "$f" && [ "$(notify-send -i "$f" -A default="Open in Satty" "Screenshot saved" "$f")" = default ] && satty -f "$f" --copy-command wl-copy --early-exit -o "$HOME/Pictures/Screenshots/%Y%m%d_%H%M%S-edited.png"'), "Screenshot: select output or region")
-bind("SUPER + SHIFT + Print", hl.dsp.exec_cmd([[mkdir -p ~/Pictures/Screenshots; f=$HOME/Pictures/Screenshots/$(date +%Y%m%d_%H%M%S).png; ws=$(hyprctl monitors -j | jq -c 'map(.activeWorkspace.id)'); g=$(hyprctl clients -j | jq -r --argjson ws "$ws" '.[] | select(.mapped and (.workspace.id as $w | $ws | index($w))) | "\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1])"' | slurp -r) || exit; grim -g "$g" "$f" && wl-copy -t image/png < "$f" && [ "$(notify-send -i "$f" -A default="Open in Satty" "Screenshot saved" "$f")" = default ] && satty -f "$f" --copy-command wl-copy --early-exit -o "$HOME/Pictures/Screenshots/%Y%m%d_%H%M%S-edited.png"]]), "Screenshot: select a window")
+-- Screenshots and OCR share one helper so the keybinds stay short.
+bind("Print", hl.dsp.exec_cmd("$HOME/.local/bin/rice-screenshot region"), "Screenshot: region")
+bind("SHIFT + Print", hl.dsp.exec_cmd("$HOME/.local/bin/rice-screenshot full"), "Screenshot: all screens")
+bind(mainMod .. " + Print", hl.dsp.exec_cmd("$HOME/.local/bin/rice-screenshot output"), "Screenshot: select output or region")
+bind(mainMod .. " + SHIFT + Print", hl.dsp.exec_cmd("$HOME/.local/bin/rice-screenshot window"), "Screenshot: select a window")
+bind(mainMod .. " + SHIFT + O", hl.dsp.exec_cmd("$HOME/.local/bin/rice-screenshot ocr"), "OCR: copy text from a region")
 
 -- Focus and numeric workspaces (10 maps to key 0).
 bind(mainMod .. " + left", hl.dsp.focus({ direction = "left" }), "Focus left")
@@ -83,10 +114,15 @@ bind(mainMod .. " + right", hl.dsp.focus({ direction = "right" }), "Focus right"
 bind(mainMod .. " + up", hl.dsp.focus({ direction = "up" }), "Focus up")
 bind(mainMod .. " + down", hl.dsp.focus({ direction = "down" }), "Focus down")
 
+-- Relative workspace navigation wraps inside the fixed 1-10 ring.
+bind(mainMod .. " + CTRL + left", workspaces.focus_relative(-1), "Previous workspace (relative)")
+bind(mainMod .. " + CTRL + right", workspaces.focus_relative(1), "Next workspace (relative)")
+
 for workspace = 1, 10 do
     local key = workspace % 10
     bind(mainMod .. " + " .. key, hl.dsp.focus({ workspace = workspace }), "Workspace " .. workspace)
     bind(mainMod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = workspace }), "Move window to workspace " .. workspace)
+    bind(mainMod .. " + ALT + " .. key, hl.dsp.window.move({ workspace = workspace, follow = false }), "Move window silently to workspace " .. workspace)
 end
 
 bind(mainMod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }), "Next occupied workspace")

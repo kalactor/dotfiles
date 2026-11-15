@@ -105,6 +105,7 @@ button:hover {
 #custom-expand-icon,
 #custom-weather,
 #custom-mode,
+#custom-notification,
 #custom-seed4,
 #custom-updates,
 #custom-power {
@@ -123,6 +124,27 @@ button:hover {
 
 #custom-mode.dark {
     color: @accent_alt;
+}
+
+/* SwayNC states: count and DND at a glance. */
+#custom-notification.notification {
+    color: @accent;
+}
+
+#custom-notification.dnd-notification,
+#custom-notification.dnd-inhibited-notification {
+    color: @accent_alt;
+}
+
+#custom-notification.inhibited-notification {
+    color: @warning;
+}
+
+#custom-notification.none,
+#custom-notification.dnd-none,
+#custom-notification.inhibited-none,
+#custom-notification.dnd-inhibited-none {
+    color: alpha(@fg, 0.4);
 }
 
 #pulseaudio.muted {

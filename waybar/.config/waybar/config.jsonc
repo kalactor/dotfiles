@@ -24,6 +24,7 @@
 
   "modules-right": [
     "custom/mode",
+    "custom/notification",
     "pulseaudio",
     "network",
     "custom/seed4",
@@ -82,6 +83,28 @@
     "tooltip": true,
     "on-click": "$HOME/.local/bin/rice-mode toggle",
     "on-click-right": "$HOME/.local/bin/rice-mode auto"
+  },
+
+  "custom/notification": {
+    "tooltip": true,
+    "format": "{icon} {text}",
+    "format-icons": {
+      "notification": "󱅫",
+      "none": "󰂜",
+      "dnd-notification": "󰂠",
+      "dnd-none": "󰪓",
+      "inhibited-notification": "󰂛",
+      "inhibited-none": "󰪑",
+      "dnd-inhibited-notification": "󰂛",
+      "dnd-inhibited-none": "󰪑"
+    },
+    "return-type": "json",
+    "exec-if": "which swaync-client",
+    "exec": "swaync-client -swb",
+    "on-click": "swaync-client -t -sw",
+    "on-click-right": "swaync-client -d -sw",
+    "on-click-middle": "swaync-client -C",
+    "escape": true
   },
 
   "custom/power": {
