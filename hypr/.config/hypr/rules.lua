@@ -70,6 +70,16 @@ hl.window_rule({
     float = true,
 })
 
+-- Satty sizes itself to the screenshot, which can cover the whole monitor.
+-- Keep the annotation window floating at a comfortable, centered size.
+hl.window_rule({
+    name = "satty-float",
+    match = { class = "^(com\\.gabm\\.satty|satty)$" },
+    float = true,
+    size = "(monitor_w*0.8) (monitor_h*0.8)",
+    center = true,
+})
+
 -- Picture-in-picture: float, pin and keep the player's aspect ratio.  The
 -- initial move keeps it from jumping before the PiP keybind resizes it.
 hl.window_rule({
@@ -90,6 +100,7 @@ tagged_rule(opaque_tag, {
     "mpv",
     "swayimg",
     "satty",
+    "com\\.gabm\\.satty",
     "gimp",
     "krita",
     "inkscape",
@@ -103,7 +114,6 @@ tagged_rule(opaque_tag, {
 
 -- Floating apps.
 tagged_rule(float_tag, {
-    "satty",
     "swayimg",
     "blueman-manager",
     "nm-connection-editor",

@@ -58,4 +58,8 @@ done
 grep -q 'rice-screenshot' "$target/.config/hypr/binds.lua"
 grep -q '"custom/notification"' "$target/.config/waybar/config.jsonc"
 
+# Satty must float, and OCR must stay off the workspace-number row.
+grep -Fq 'com\\.gabm\\.satty' "$target/.config/hypr/rules.lua"
+grep -q 'SHIFT + X' "$target/.config/hypr/binds.lua"
+
 printf 'stow-smoke: all %d packages restored into an isolated HOME; numeric workspaces intact\n' "${#packages[@]}"

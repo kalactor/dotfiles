@@ -106,7 +106,9 @@ bind("Print", hl.dsp.exec_cmd("$HOME/.local/bin/rice-screenshot region"), "Scree
 bind("SHIFT + Print", hl.dsp.exec_cmd("$HOME/.local/bin/rice-screenshot full"), "Screenshot: all screens")
 bind(mainMod .. " + Print", hl.dsp.exec_cmd("$HOME/.local/bin/rice-screenshot output"), "Screenshot: select output or region")
 bind(mainMod .. " + SHIFT + Print", hl.dsp.exec_cmd("$HOME/.local/bin/rice-screenshot window"), "Screenshot: select a window")
-bind(mainMod .. " + SHIFT + O", hl.dsp.exec_cmd("$HOME/.local/bin/rice-screenshot ocr"), "OCR: copy text from a region")
+-- X for "extract text"; O sits next to 0 and is easy to confuse with
+-- workspace 10, whose move-and-follow bind is SUPER+SHIFT+0.
+bind(mainMod .. " + SHIFT + X", hl.dsp.exec_cmd("$HOME/.local/bin/rice-screenshot ocr"), "OCR: copy text from a region")
 
 -- Focus and numeric workspaces (10 maps to key 0).
 bind(mainMod .. " + left", hl.dsp.focus({ direction = "left" }), "Focus left")

@@ -277,7 +277,7 @@ Mode state lives in `~/.cache/rice/`: `mode`, `effective-mode`, `location`,
 | `Super+Shift+R` | reload Hyprland config |
 | `Print` / `Shift+Print` | screenshot region / all screens |
 | `Super+Print` / `Super+Shift+Print` | screenshot output-or-region / window |
-| `Super+Shift+O` | OCR a region into the clipboard |
+| `Super+Shift+X` | OCR a region into the clipboard |
 | `Super+Shift+V` | clipboard history |
 | `Super+Shift+C` | color picker |
 | `Super+L` | lock (hyprlock) |
@@ -298,9 +298,9 @@ there; 6–10 on `HDMI-A-1`.
 
 `rice-screenshot` saves to `~/Pictures/Screenshots` (override with
 `RICE_SCREENSHOT_DIR`), copies the image to the clipboard, and offers an
-**Annotate** action that opens Satty. The OCR mode uses Tesseract with English
-and Hindi when available, copies the recognized text, and keeps the source
-image. It can also be run directly:
+**Annotate** action that opens Satty as a centered floating window. The OCR
+mode uses Tesseract with English and Hindi when available, copies the
+recognized text, and keeps the source image. It can also be run directly:
 
 ```bash
 rice-screenshot region
