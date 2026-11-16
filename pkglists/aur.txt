@@ -1,5 +1,6 @@
 android-studio
 google-chrome
+hellwal
 hopper
 kiro-ide
 mdv

@@ -18,6 +18,10 @@ for c in hyprctl waybar swaync swaync-client rofi wlogout matugen hyprpaper \
          tesseract qalc rice-contrast kde-theme dolphin-view-defaults telegram-theme; do
     command -v "$c" >/dev/null 2>&1 && ok "$c" || bad "$c missing"
 done
+command -v hellwal >/dev/null 2>&1 && ok "hellwal (comparison engine)" \
+    || warn "hellwal missing (comparison engine unavailable)"
+command -v wallust >/dev/null 2>&1 && ok "wallust (fallback engine)" \
+    || warn "wallust missing (fallback unavailable)"
 
 echo "Services:"
 for s in hyprpolkitagent xdg-desktop-portal-hyprland pipewire wireplumber; do
@@ -47,6 +51,19 @@ else
     ok "no waybar on HDMI-A-1"
 fi
 
+echo "Theme engine:"
+engine=$(cat "$HOME/.cache/rice/theme-engine" 2>/dev/null || printf 'matugen')
+case "$engine" in
+    matugen) engine_palette="$HOME/.cache/rice/matugen.env" ;;
+    hellwal) engine_palette="$HOME/.cache/rice/hellwal/palette.env" ;;
+    wallust) engine_palette="$HOME/.cache/rice/colors.env" ;;
+    *) bad "unknown theme engine: $engine"; engine_palette="" ;;
+esac
+if [ -n "$engine_palette" ]; then
+    [ -s "$engine_palette" ] && ok "active engine: $engine" \
+        || bad "active engine palette missing: ${engine_palette#$HOME/}"
+fi
+
 echo "Generated theme files:"
 for f in "$HOME/.config/waybar/colors.css" \
          "$HOME/.config/swayimg/colors.lua" \
@@ -64,7 +81,6 @@ for f in "$HOME/.config/waybar/colors.css" \
          "$HOME/.cache/rice/Colors.qml" \
          "$HOME/.config/wlogout/colors.css" \
          "$HOME/.cache/rice/colors.env" \
-         "$HOME/.cache/rice/matugen.env" \
          "$HOME/.cache/rice/telegram.tdesktop-theme" \
          "$HOME/.local/share/rice/telegram-base.tdesktop-palette" \
          "$HOME/.config/kdeglobals" \
@@ -87,6 +103,7 @@ for p in hypr waybar kitty swaync rofi matugen swayimg wlogout rice btop cava; d
     [ -L "$HOME/.config/$p" ] && ok "~/.config/$p -> $(readlink "$HOME/.config/$p")" || bad "~/.config/$p is not a symlink"
 done
 [ -L "$HOME/.config/wallust" ] && ok "~/.config/wallust (fallback)" || warn "legacy wallust config not stowed (fallback unavailable)"
+[ -L "$HOME/.config/hellwal" ] && ok "~/.config/hellwal (comparison)" || warn "hellwal config not stowed (comparison unavailable)"
 [ -L "$HOME/.vimrc" ] && ok "~/.vimrc -> $(readlink "$HOME/.vimrc")" || bad "~/.vimrc is not a symlink"
 [ -L "$HOME/.config/mpv/mpv.conf" ] && ok "~/.config/mpv/mpv.conf -> $(readlink "$HOME/.config/mpv/mpv.conf")" || bad "~/.config/mpv/mpv.conf is not a symlink"
 [ -L "$HOME/.config/chrome-flags.conf" ] && ok "~/.config/chrome-flags.conf -> $(readlink "$HOME/.config/chrome-flags.conf")" || bad "~/.config/chrome-flags.conf is not a symlink"

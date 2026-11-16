@@ -321,6 +321,11 @@ def compute_palette(
     color0 = palette["color0"]
     color7 = palette["color7"]
     color15 = palette["color15"]
+    # Some engines map color0 to the background and color7 to the foreground
+    # (hellwal does this in light mode), which inverts the ANSI black/white
+    # convention.  Normalize the pair before enforcing the contrast target.
+    if rel_lum(color0) > rel_lum(color7):
+        color0, color7 = color7, color0
     if contrast(color0, color7) < PAIR_TARGET - 1e-9:
         color0 = force_lightness(color0, 0.10, 0.06)
         color7 = force_lightness(color7, 0.96, 0.03)

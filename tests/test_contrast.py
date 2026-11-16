@@ -171,6 +171,18 @@ class PaletteTests(unittest.TestCase):
         self.assertEqual(self.rc.check_palette(palette, "#211719"), [])
         self.assertGreaterEqual(self.rc.contrast(palette["foreground"], "#211719"), 6.95)
 
+    def test_inverted_ansi_black_white_pair_is_normalized(self):
+        # hellwal's light palette maps color0 to the background and color7 to
+        # the foreground.  ANSI black/white must keep their terminal meaning.
+        palette = self.rc.compute_palette(BASE_LIGHT, None, "#baadaa")
+        self.assertLess(self.rc.rel_lum(palette["color0"]), self.rc.rel_lum(palette["color7"]))
+        self.assertGreaterEqual(
+            self.rc.contrast(palette["color0"], palette["color7"]), 6.95
+        )
+        self.assertGreaterEqual(
+            self.rc.contrast(palette["color0"], palette["color15"]), 6.95
+        )
+
     def test_material_roles_from_matugen_are_preserved(self):
         material = dict(BASE_DARK)
         material.update(

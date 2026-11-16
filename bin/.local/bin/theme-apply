@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # usage: theme-apply IMAGE [light|dark]
 # One wallpaper change recolors every app: matugen -> rice-contrast -> reload.
-# Set RICE_THEME_ENGINE=wallust to use the legacy wallust engine.
+# Set RICE_THEME_ENGINE=hellwal for the comparison engine, or
+# RICE_THEME_ENGINE=wallust for the legacy wallust engine.
 # If MODE is omitted, ~/.cache/rice/effective-mode is used (dark as fallback).
 set -uo pipefail
 
@@ -31,9 +32,9 @@ record_failure() {
 }
 
 # 1. Generate the base palette.  matugen is the default engine; set
-# RICE_THEME_ENGINE=wallust to use the legacy wallust path.  Both engines
-# write the base palette to ~/.cache/rice/colors.env; rice-contrast then
-# enforces contrast and renders every application template.
+# RICE_THEME_ENGINE=hellwal or RICE_THEME_ENGINE=wallust to use a comparison
+# engine.  All engines write the base palette to ~/.cache/rice/colors.env;
+# rice-contrast then enforces contrast and renders every application template.
 engine="${RICE_THEME_ENGINE:-matugen}"
 ansi_scheme=""
 
@@ -64,6 +65,38 @@ case "$engine" in
     fi
     if ! cp -f "$matugen_env" "$HOME/.cache/rice/colors.env"; then
       notify-send -u critical "theme-apply" "could not stage the matugen palette"
+      exit 1
+    fi
+    ;;
+  hellwal)
+    hellwal_templates="$HOME/.config/hellwal/templates"
+    hellwal_output="$HOME/.cache/rice/hellwal"
+    if ! command -v hellwal >/dev/null 2>&1; then
+      notify-send -u critical "theme-apply" "hellwal is not installed"
+      exit 1
+    fi
+    if [ ! -f "$hellwal_templates/palette.env" ]; then
+      notify-send -u critical "theme-apply" "hellwal palette template missing"
+      exit 1
+    fi
+    rm -rf "$hellwal_output"
+    mkdir -p "$hellwal_output"
+    hellwal_args=(-i "$img" -f "$hellwal_templates" -o "$hellwal_output" \
+      --skip-term-colors --no-cache --quiet)
+    case "$mode" in
+      light) hellwal_args+=(-l) ;;
+      *) hellwal_args+=(-d) ;;
+    esac
+    if ! hellwal "${hellwal_args[@]}" >/dev/null 2>&1; then
+      notify-send -u critical "theme-apply" "hellwal failed for $img ($mode)"
+      exit 1
+    fi
+    if [ ! -s "$hellwal_output/palette.env" ]; then
+      notify-send -u critical "theme-apply" "hellwal did not render its palette"
+      exit 1
+    fi
+    if ! cp -f "$hellwal_output/palette.env" "$HOME/.cache/rice/colors.env"; then
+      notify-send -u critical "theme-apply" "could not stage the hellwal palette"
       exit 1
     fi
     ;;
@@ -280,3 +313,5 @@ fi
 
 printf '%s\n' "$mode" > "$HOME/.cache/rice/theme-mode.tmp"
 mv -f "$HOME/.cache/rice/theme-mode.tmp" "$HOME/.cache/rice/theme-mode"
+printf '%s\n' "$engine" > "$HOME/.cache/rice/theme-engine.tmp"
+mv -f "$HOME/.cache/rice/theme-engine.tmp" "$HOME/.cache/rice/theme-engine"

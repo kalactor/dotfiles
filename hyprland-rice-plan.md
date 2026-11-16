@@ -63,7 +63,7 @@
 
 - Hyprland Lua config loads with no errors; monitors are positioned correctly; numlock is on; float rules for Satty/swayimg/pavucontrol/Blueman work.
 - Screenshots (grim + slurp + Satty), screen recording (gpu-screen-recorder + Waybar indicator), wallpaper script, Waybar, SwayNC, hyprpaper and hypridle are running.
-- matugen (Material You) is now the active palette engine and generates a base palette plus semantic Material roles from one wallpaper; `rice-contrast` enforces WCAG contrast against the composited terminal background and renders 17 application templates. The previous wallust path remains available with `RICE_THEME_ENGINE=wallust` for side-by-side comparison.
+- matugen (Material You) is now the active palette engine and generates a base palette plus semantic Material roles from one wallpaper; `rice-contrast` enforces WCAG contrast against the composited terminal background and renders 17 application templates. Hellwal and the previous wallust path remain available with `RICE_THEME_ENGINE=hellwal` or `RICE_THEME_ENGINE=wallust` for side-by-side comparison.
 - Audio (PipeWire/WirePlumber), NetworkManager, Bluetooth, CUPS, zram swap, timezone/NTP and GNOME keyring PAM unlock work.
 - vim is the default text editor; kitty is the terminal; SDDM successfully starts Hyprland.
 
