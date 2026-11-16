@@ -70,6 +70,13 @@ hl.window_rule({
     float = true,
 })
 
+hl.window_rule({
+    name = "About Mozilla Firefox",
+    match = { title = "^About Mozilla Firefox$" },
+    float = true,
+    center = true,
+})
+
 -- Satty sizes itself to the screenshot, which can cover the whole monitor.
 -- Keep the annotation window floating at a comfortable, centered size.
 hl.window_rule({
