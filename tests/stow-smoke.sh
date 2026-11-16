@@ -71,9 +71,9 @@ grep -q 'specialWorkspace' "$target/.config/hypr/look.lua"
 grep -q 'logout_dialog' "$target/.config/hypr/rules.lua"
 grep -q 'wlogout-tile-in' "$target/.config/wlogout/style.css"
 
-# matugen is the active palette engine; hellwal is the comparison engine and
-# wallust remains the legacy fallback.
-grep -q 'RICE_THEME_ENGINE:-matugen' "$target/.local/bin/theme-apply"
+# hellwal is the active palette engine; matugen and the legacy wallust path
+# remain available as alternatives.
+grep -q 'RICE_THEME_ENGINE:-hellwal' "$target/.local/bin/theme-apply"
 grep -q 'colors.surface_container_low' "$target/.config/matugen/templates/palette.env"
 grep -q 'hellwal)' "$target/.local/bin/theme-apply"
 grep -q '%%background.hex%%' "$target/.config/hellwal/templates/palette.env"

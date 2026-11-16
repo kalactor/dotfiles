@@ -10,9 +10,8 @@ trap 'rm -rf "$work"' EXIT
 home="$work/home"
 stub="$work/stub"
 mkdir -p "$home/.local/bin" "$home/Pictures/walls/light" "$stub" \
-    "$home/.config/matugen/templates" "$home/.config/wallust/templates"
-printf '[config]\n' > "$home/.config/matugen/config.toml"
-printf 'background={{ background }}\n' > "$home/.config/matugen/templates/palette.env"
+    "$home/.config/hellwal/templates" "$home/.config/wallust/templates"
+printf 'background=#%%background.hex%%\n' > "$home/.config/hellwal/templates/palette.env"
 # The shared application templates live in the legacy wallust package; an
 # empty manifest keeps rice-contrast quiet when this isolated HOME has none.
 printf '[templates]\n' > "$home/.config/wallust/wallust.toml"
@@ -23,13 +22,20 @@ for command in gsettings swaync-client notify-send pkill; do
     printf '#!/bin/sh\nexit 0\n' > "$stub/$command"
     chmod +x "$stub/$command"
 done
-# matugen normally renders the base palette and Material roles into
-# ~/.cache/rice/matugen.env.  The stub keeps that contract without needing an
-# image decoder.
-cat > "$stub/matugen" <<'EOF'
+# hellwal normally renders the base palette into its output folder.  The stub
+# keeps that contract without needing an image decoder.
+cat > "$stub/hellwal" <<'EOF'
 #!/bin/sh
-mkdir -p "$HOME/.cache/rice"
-cat > "$HOME/.cache/rice/matugen.env" <<'PALETTE'
+out=
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -o) out=$2; shift 2 ;;
+        *) shift ;;
+    esac
+done
+[ -n "$out" ] || exit 1
+mkdir -p "$out"
+cat > "$out/palette.env" <<'PALETTE'
 background=#C7B9B9
 foreground=#6B6E33
 cursor=#867F2A
@@ -52,7 +58,7 @@ color15=#242511
 PALETTE
 exit 0
 EOF
-chmod +x "$stub/matugen"
+chmod +x "$stub/hellwal"
 cp "$ROOT/bin/.local/bin/rice-contrast" "$home/.local/bin/rice-contrast"
 chmod +x "$home/.local/bin/rice-contrast"
 printf '#!/bin/sh\nexit 1\n' > "$stub/hyprctl"
@@ -75,6 +81,7 @@ run_env=(env HOME="$home" PATH="$stub:/usr/bin:/bin")
 # A complete theme application writes its completion marker.
 "${run_env[@]}" "$ROOT/bin/.local/bin/theme-apply" "$home/wall.jpg" light
 [ "$(cat "$home/.cache/rice/theme-mode")" = light ]
+[ "$(cat "$home/.cache/rice/theme-engine")" = hellwal ]
 rm "$home/.cache/rice/theme-mode"
 
 # A secondary generator failure is reported and the marker stays incomplete.

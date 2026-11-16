@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Enforce readable contrast on the generated palette and re-render templates.
 
-The palette engine is matugen by default (wallust remains available through
-``RICE_THEME_ENGINE=wallust``).  This stage:
+The palette engine is hellwal by default (matugen and wallust remain available
+through ``RICE_THEME_ENGINE=matugen`` or ``RICE_THEME_ENGINE=wallust``).  This
+stage:
 
 * reads the palette the engine generated (``~/.cache/rice/colors.env``);
 * optionally takes ANSI 0-15 from

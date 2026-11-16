@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # usage: theme-apply IMAGE [light|dark]
-# One wallpaper change recolors every app: matugen -> rice-contrast -> reload.
-# Set RICE_THEME_ENGINE=hellwal for the comparison engine, or
+# One wallpaper change recolors every app: hellwal -> rice-contrast -> reload.
+# Set RICE_THEME_ENGINE=matugen for the Material You engine, or
 # RICE_THEME_ENGINE=wallust for the legacy wallust engine.
 # If MODE is omitted, ~/.cache/rice/effective-mode is used (dark as fallback).
 set -uo pipefail
@@ -31,11 +31,11 @@ record_failure() {
     printf 'theme-apply: %s\n' "$1" >&2
 }
 
-# 1. Generate the base palette.  matugen is the default engine; set
-# RICE_THEME_ENGINE=hellwal or RICE_THEME_ENGINE=wallust to use a comparison
+# 1. Generate the base palette.  hellwal is the default engine; set
+# RICE_THEME_ENGINE=matugen or RICE_THEME_ENGINE=wallust to use an alternative
 # engine.  All engines write the base palette to ~/.cache/rice/colors.env;
 # rice-contrast then enforces contrast and renders every application template.
-engine="${RICE_THEME_ENGINE:-matugen}"
+engine="${RICE_THEME_ENGINE:-hellwal}"
 ansi_scheme=""
 
 case "$engine" in
