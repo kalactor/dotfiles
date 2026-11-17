@@ -1,9 +1,9 @@
 @import "colors.css";
 
-/* Fixed semantic colors: accent follows the wallpaper, red does not */
+/* Bar-safe semantic colours: derived against bar_bg, not the wallpaper */
 @define-color bg @bar_bg;
 @define-color fg @bar_fg;
-@define-color red @danger;
+@define-color red @bar_danger;
 
 * {
     font-family: "JetBrainsMono Nerd Font";
@@ -130,7 +130,7 @@ button:hover {
 }
 
 #custom-mode.dark {
-    color: @accent_alt;
+    color: @bar_accent_alt;
 }
 
 /* SwayNC states: count and DND at a glance. */
@@ -140,11 +140,11 @@ button:hover {
 
 #custom-notification.dnd-notification,
 #custom-notification.dnd-inhibited-notification {
-    color: @accent_alt;
+    color: @bar_accent_alt;
 }
 
 #custom-notification.inhibited-notification {
-    color: @warning;
+    color: @bar_warning;
 }
 
 #custom-notification.none,
@@ -171,16 +171,16 @@ button:hover {
 }
 
 #custom-seed4.connecting {
-    color: @info;
+    color: @bar_info;
 }
 
 #custom-seed4.connected {
-    color: @success;
+    color: @bar_success;
 }
 
 #custom-seed4.cookie-expired,
 #custom-seed4.error {
-    color: @danger;
+    color: @bar_danger;
 }
 
 #idle_inhibitor.deactivated {
@@ -217,7 +217,7 @@ button:hover {
 }
 
 #power-profiles-daemon.power-saver {
-    color: @success;
+    color: @bar_success;
 }
 
 #custom-updates.has-updates {
@@ -280,7 +280,7 @@ tooltip label {
 }
 
 #network.disconnected {
-    color: @accent_alt;
+    color: @bar_accent_alt;
 }
 
 #custom-recorder.recording {

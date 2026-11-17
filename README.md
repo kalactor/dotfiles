@@ -167,7 +167,7 @@ Static themes ignore the wallpaper. Each theme lives in
 palette per mode:
 
 ```text
-themes/mclaren/
+themes/<name>/
 ├── theme.conf     # name, description, wallpaper_root, default_light/dark
 ├── light.env      # full palette, contrast-checked once
 └── dark.env
@@ -178,10 +178,16 @@ subdirectories. When a static theme is active, `wall next|prev|random|pick`
 chooses from that theme's wallpaper tree instead of
 `~/Pictures/walls/{light,dark}`.
 
+Each palette also carries bar-safe status colours (`bar_danger`,
+`bar_success`, `bar_warning`, `bar_info`, `bar_accent_alt`) derived against
+`bar_bg`, so recorder, VPN, DND and power-profile icons stay readable even
+when the bar is a saturated brand colour.
+
 Press **`Super+Shift+T`** for the rofi theme picker, or apply a theme directly:
 
 ```bash
 theme-set mclaren
+theme-set redbull
 theme-set mclaren dark
 rice-theme --list
 ```
@@ -197,11 +203,19 @@ Return to wallpaper-derived colours with an explicit engine override:
 RICE_THEME_ENGINE=hellwal wall next
 ```
 
-The bundled **McLaren F1** theme uses the team's papaya `#FF8000` with carbon
-`#17171A` and anthracite surfaces. Light mode keeps the papaya bar with a
-carbon selection and clock; dark mode flips to a carbon bar with papaya
-selection and chrome highlights. Both palettes pass the contrast policy, and
-the wallpapers live in `~/Pictures/walls/mclaren/{light,dark}`.
+Two themes ship by default:
+
+- **McLaren F1** uses papaya `#FF8000` with carbon `#17171A` and anthracite
+  surfaces. Light mode keeps the papaya bar with a carbon selection and clock;
+  dark mode flips to a carbon bar with papaya selection and chrome highlights.
+- **Red Bull Racing** uses navy `#121F45`, race red `#C8102E`/`#E8002D` and
+  yellow `#FFCC00`. Light mode has a navy bar with a yellow selection and
+  clock plus a livery-blue secondary; dark mode has a navy-carbon bar with a
+  red selection and clock and yellow secondary accents.
+
+Both palettes pass the contrast policy. The wallpapers live in
+`~/Pictures/walls/mclaren/{light,dark}` and
+`~/Pictures/walls/redbull/{light,dark}`.
 
 ### Contrast and transparency
 

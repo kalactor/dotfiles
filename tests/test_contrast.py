@@ -174,15 +174,16 @@ class PaletteTests(unittest.TestCase):
         self.assertGreaterEqual(self.rc.contrast(palette["foreground"], "#211719"), 6.95)
 
     def test_static_theme_palettes_pass_contrast(self):
-        themes = ROOT / "rice" / ".config" / "rice" / "themes" / "mclaren"
-        for mode in ("light", "dark"):
-            palette = self.rc.read_palette(themes / f"{mode}.env")
-            self.assertTrue(set(self.rc.STATIC_REQUIRED_KEYS) <= set(palette))
-            self.assertEqual(
-                self.rc.check_palette(palette, palette["effective_background"]),
-                [],
-                f"{mode} static palette regressed",
-            )
+        themes_root = ROOT / "rice" / ".config" / "rice" / "themes"
+        for theme in ("mclaren", "redbull"):
+            for mode in ("light", "dark"):
+                palette = self.rc.read_palette(themes_root / theme / f"{mode}.env")
+                self.assertTrue(set(self.rc.STATIC_REQUIRED_KEYS) <= set(palette))
+                self.assertEqual(
+                    self.rc.check_palette(palette, palette["effective_background"]),
+                    [],
+                    f"{theme} {mode} static palette regressed",
+                )
 
     def test_trusted_palette_is_not_adjusted(self):
         source = (
