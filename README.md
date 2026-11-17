@@ -197,8 +197,11 @@ Return to wallpaper-derived colours with an explicit engine override:
 RICE_THEME_ENGINE=hellwal wall next
 ```
 
-The bundled **McLaren F1** theme uses papaya orange, carbon surfaces, and the
-wallpapers in `~/Pictures/walls/mclaren/{light,dark}`.
+The bundled **McLaren F1** theme uses the team's papaya `#FF8000` with carbon
+`#17171A` and anthracite surfaces. Light mode keeps the papaya bar with a
+carbon selection and clock; dark mode flips to a carbon bar with papaya
+selection and chrome highlights. Both palettes pass the contrast policy, and
+the wallpapers live in `~/Pictures/walls/mclaren/{light,dark}`.
 
 ### Contrast and transparency
 

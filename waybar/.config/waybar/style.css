@@ -71,10 +71,17 @@ button:hover {
     transition: 0.15s ease-in-out;
 }
 
+#workspaces button.visible {
+    opacity: 1;
+    color: @fg;
+    background: alpha(@fg, 0.12);
+    border-radius: 99px;
+}
+
 #workspaces button.active {
     opacity: 1;
-    color: @accent_fg;
-    background: alpha(@accent, 1);
+    color: @selection_fg;
+    background: @selection_bg;
     border-radius: 99px;
 }
 
@@ -84,14 +91,14 @@ button:hover {
 }
 
 #workspaces button.active.empty {
-    color: @accent_fg;
+    color: @selection_fg;
     opacity: 1;
 }
 
 #workspaces button:hover {
     opacity: 1;
-    color: @accent;
-    background: alpha(@accent, 0.12);
+    color: @selection_bg;
+    background: alpha(@selection_bg, 0.15);
     border-radius: 99px;
 }
 
@@ -119,7 +126,7 @@ button:hover {
 /* Light/dark mode indicator: click toggles, right-click returns to auto */
 #custom-mode {
     font-size: 14px;
-    color: @accent;
+    color: @selection_bg;
 }
 
 #custom-mode.dark {
@@ -128,7 +135,7 @@ button:hover {
 
 /* SwayNC states: count and DND at a glance. */
 #custom-notification.notification {
-    color: @accent;
+    color: @selection_bg;
 }
 
 #custom-notification.dnd-notification,
@@ -202,7 +209,7 @@ button:hover {
 }
 
 #power-profiles-daemon.performance {
-    color: @accent;
+    color: @selection_bg;
 }
 
 #power-profiles-daemon.balanced {
@@ -214,11 +221,11 @@ button:hover {
 }
 
 #custom-updates.has-updates {
-    color: @accent;
+    color: @selection_bg;
 }
 
 #clock {
-    color: @accent;
+    color: @selection_bg;
 }
 
 /* The date half of the clock keeps the normal bar text colour. */
