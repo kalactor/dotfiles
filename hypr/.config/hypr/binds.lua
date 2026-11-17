@@ -96,6 +96,7 @@ bind("SUPER + F6", hl.dsp.exec_cmd("$HOME/.local/bin/wall next"), "Next wallpape
 bind("SUPER + SHIFT + F6", hl.dsp.exec_cmd("$HOME/.local/bin/wall prev"), "Previous wallpaper")
 bind("SUPER + F7", hl.dsp.exec_cmd("$HOME/.local/bin/wall random"), "Random wallpaper")
 bind("SUPER + F8", hl.dsp.exec_cmd("$HOME/.local/bin/wall pick"), "Choose wallpaper")
+bind(mainMod .. " + SHIFT + T", hl.dsp.exec_cmd("$HOME/.local/bin/rice-theme"), "Theme picker: static themes")
 
 -- Automatic and manual light/dark mode.
 bind("SUPER + CTRL + L", hl.dsp.exec_cmd("$HOME/.local/bin/rice-mode light"), "Force light mode")

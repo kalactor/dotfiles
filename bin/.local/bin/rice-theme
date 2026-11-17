@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+"""Pick a static rice theme with rofi and apply it via theme-set."""
+
+from __future__ import annotations
+
+import subprocess
+import sys
+from pathlib import Path
+
+HOME = Path.home()
+THEMES = HOME / ".config" / "rice" / "themes"
+THEME_SET = HOME / ".local" / "bin" / "theme-set"
+CURRENT = HOME / ".cache" / "rice" / "theme-name"
+
+
+def read_conf(path: Path) -> dict[str, str]:
+    data: dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        data[key.strip()] = value.strip()
+    return data
+
+
+def themes() -> list[tuple[str, str, str]]:
+    rows: list[tuple[str, str, str]] = []
+    if not THEMES.is_dir():
+        return rows
+    for directory in sorted(THEMES.iterdir()):
+        conf = directory / "theme.conf"
+        if not conf.is_file():
+            continue
+        data = read_conf(conf)
+        rows.append(
+            (
+                data.get("name", directory.name),
+                directory.name,
+                data.get("description", ""),
+            )
+        )
+    return rows
+
+
+def current_theme() -> str:
+    try:
+        return CURRENT.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+
+
+def main() -> int:
+    rows = themes()
+    if not rows:
+        print(f"rice-theme: no themes in {THEMES}", file=sys.stderr)
+        return 1
+
+    active = current_theme()
+    labels = []
+    for name, directory, description in rows:
+        marker = "● " if directory == active else "  "
+        suffix = f"  ·  {description}" if description else ""
+        labels.append(f"{marker}{name}{suffix}")
+    text = "\n".join(labels)
+
+    if "--list" in sys.argv[1:]:
+        print(text)
+        return 0
+
+    selected = subprocess.run(
+        [
+            "rofi",
+            "-dmenu",
+            "-i",
+            "-p",
+            "Theme",
+            "-mesg",
+            "Static themes · colours stay fixed when the wallpaper changes",
+            "-theme-str",
+            "window { width: 52%; } listview { lines: 10; }",
+        ],
+        input=text,
+        capture_output=True,
+        text=True,
+    )
+    if selected.returncode != 0 or not selected.stdout.strip():
+        return 0
+
+    try:
+        index = text.splitlines().index(selected.stdout.rstrip("\n"))
+    except ValueError:
+        print("rice-theme: selection did not match a theme", file=sys.stderr)
+        return 1
+
+    directory = rows[index][1]
+    return subprocess.run([str(THEME_SET), directory], check=False).returncode
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

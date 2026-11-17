@@ -31,11 +31,15 @@ record_failure() {
     printf 'theme-apply: %s\n' "$1" >&2
 }
 
-# 1. Generate the base palette.  hellwal is the default engine; set
-# RICE_THEME_ENGINE=matugen or RICE_THEME_ENGINE=wallust to use an alternative
-# engine.  All engines write the base palette to ~/.cache/rice/colors.env;
-# rice-contrast then enforces contrast and renders every application template.
-engine="${RICE_THEME_ENGINE:-hellwal}"
+# 1. Generate the base palette.  hellwal is the default engine; an explicit
+# RICE_THEME_ENGINE overrides the engine recorded by the last successful run.
+# RICE_THEME_ENGINE=static applies a pre-validated theme from
+# ~/.config/rice/themes/<name>/{light,dark}.env.  All engines write the base
+# palette to ~/.cache/rice/colors.env; rice-contrast then enforces contrast and
+# renders every application template.
+engine="${RICE_THEME_ENGINE:-$(cat "$HOME/.cache/rice/theme-engine" 2>/dev/null || true)}"
+[ -n "$engine" ] || engine=hellwal
+theme_name="${RICE_THEME_NAME:-$(cat "$HOME/.cache/rice/theme-name" 2>/dev/null || true)}"
 ansi_scheme=""
 
 case "$engine" in
@@ -100,6 +104,23 @@ case "$engine" in
       exit 1
     fi
     ;;
+  static)
+    if [ -z "$theme_name" ]; then
+      notify-send -u critical "theme-apply" "no static theme selected"
+      exit 1
+    fi
+    theme_dir="$HOME/.config/rice/themes/$theme_name"
+    theme_palette="$theme_dir/$mode.env"
+    [ -f "$theme_palette" ] || theme_palette="$theme_dir/palette.env"
+    if [ ! -f "$theme_palette" ]; then
+      notify-send -u critical "theme-apply" "static theme palette missing: ${theme_palette#$HOME/}"
+      exit 1
+    fi
+    if ! cp -f "$theme_palette" "$HOME/.cache/rice/colors.env"; then
+      notify-send -u critical "theme-apply" "could not stage the static palette"
+      exit 1
+    fi
+    ;;
   wallust)
     # The full wallust.toml also lists semantic templates that wallust cannot
     # render (it only knows the base keys), so render the base palette through
@@ -139,8 +160,14 @@ case "$engine" in
 esac
 
 if [ -x "$HOME/.local/bin/rice-contrast" ]; then
-  contrast_args=(--image "$img" --mode "$mode")
-  [ -n "$ansi_scheme" ] && contrast_args+=(--ansi "$ansi_scheme")
+  if [ "$engine" = static ]; then
+    # Static palettes are pre-validated.  --trusted renders the templates
+    # without re-running the contrast adjustment pass.
+    contrast_args=(--mode "$mode" --trusted)
+  else
+    contrast_args=(--image "$img" --mode "$mode")
+    [ -n "$ansi_scheme" ] && contrast_args+=(--ansi "$ansi_scheme")
+  fi
   if ! "$HOME/.local/bin/rice-contrast" "${contrast_args[@]}"; then
     record_failure "contrast enforcement failed"
   fi
@@ -315,3 +342,9 @@ printf '%s\n' "$mode" > "$HOME/.cache/rice/theme-mode.tmp"
 mv -f "$HOME/.cache/rice/theme-mode.tmp" "$HOME/.cache/rice/theme-mode"
 printf '%s\n' "$engine" > "$HOME/.cache/rice/theme-engine.tmp"
 mv -f "$HOME/.cache/rice/theme-engine.tmp" "$HOME/.cache/rice/theme-engine"
+if [ "$engine" = static ]; then
+  printf '%s\n' "$theme_name" > "$HOME/.cache/rice/theme-name.tmp"
+  mv -f "$HOME/.cache/rice/theme-name.tmp" "$HOME/.cache/rice/theme-name"
+else
+  rm -f "$HOME/.cache/rice/theme-name"
+fi

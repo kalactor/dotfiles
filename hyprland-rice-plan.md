@@ -64,6 +64,7 @@
 - Hyprland Lua config loads with no errors; monitors are positioned correctly; numlock is on; float rules for Satty/swayimg/pavucontrol/Blueman work.
 - Screenshots (grim + slurp + Satty), screen recording (gpu-screen-recorder + Waybar indicator), wallpaper script, Waybar, SwayNC, hyprpaper and hypridle are running.
 - hellwal is the active palette engine and renders an image-driven 16-colour palette from one wallpaper; `rice-contrast` enforces WCAG contrast against the composited terminal background and renders 17 application templates. Matugen (Material You) and the previous wallust path remain available with `RICE_THEME_ENGINE=matugen` or `RICE_THEME_ENGINE=wallust` for side-by-side comparison.
+- Static themes are supported: `theme-set` applies pre-validated palettes from `rice/.config/rice/themes`, `Super+Shift+T` opens the rofi theme picker, and `wall next` follows the active theme's wallpaper tree.
 - Audio (PipeWire/WirePlumber), NetworkManager, Bluetooth, CUPS, zram swap, timezone/NTP and GNOME keyring PAM unlock work.
 - vim is the default text editor; kitty is the terminal; SDDM successfully starts Hyprland.
 

@@ -296,13 +296,38 @@ def human_delta(value: datetime | None, now: datetime | None = None) -> str:
     return f"{minutes}m"
 
 
+def active_wall_root() -> Path:
+    """Wallpaper root for the active static theme, or the normal walls tree."""
+    if read_text(CACHE / "theme-engine") != "static":
+        return WALLS
+    name = read_text(CACHE / "theme-name")
+    if not name:
+        return WALLS
+    conf = HOME / ".config" / "rice" / "themes" / name / "theme.conf"
+    try:
+        lines = conf.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return WALLS
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        if key.strip() == "wallpaper_root":
+            value = value.strip()
+            if value:
+                return Path(os.path.expanduser(value))
+    return WALLS
+
+
 def wallpaper_for(mode: str) -> str:
     """Return the saved wallpaper for a mode, or the active symlink target."""
+    root = active_wall_root()
     saved = CACHE / f"wallpaper-{mode}"
     candidate = read_text(saved)
     if candidate and Path(candidate).is_file():
         try:
-            if Path(candidate).is_relative_to(WALLS / mode):
+            if Path(candidate).is_relative_to(root / mode):
                 return candidate
         except (OSError, ValueError):
             pass
@@ -313,7 +338,7 @@ def wallpaper_for(mode: str) -> str:
     except OSError:
         return ""
     try:
-        if target.is_file() and target.is_relative_to(WALLS / mode):
+        if target.is_file() and target.is_relative_to(root / mode):
             return str(target)
     except (OSError, ValueError):
         pass

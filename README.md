@@ -132,6 +132,7 @@ reloads the apps:
 | SDDM | `~/.cache/rice/Colors.qml` → installed theme |
 | mode marker | `~/.cache/rice/theme-mode` |
 | engine marker | `~/.cache/rice/theme-engine` |
+| static theme marker | `~/.cache/rice/theme-name` |
 
 `wall` only lists wallpapers from the current mode directory
 (`~/Pictures/walls/light` or `~/Pictures/walls/dark`). Choosing a wallpaper
@@ -158,6 +159,46 @@ The matugen scheme type can be overridden without editing the config:
 ```bash
 RICE_MATUGEN_TYPE=scheme-vibrant wall next
 ```
+
+### Static themes
+
+Static themes ignore the wallpaper. Each theme lives in
+`~/.config/rice/themes/<name>/` with a `theme.conf` and one pre-validated
+palette per mode:
+
+```text
+themes/mclaren/
+├── theme.conf     # name, description, wallpaper_root, default_light/dark
+├── light.env      # full palette, contrast-checked once
+└── dark.env
+```
+
+`theme.conf` points at a wallpaper root with `light/` and `dark/`
+subdirectories. When a static theme is active, `wall next|prev|random|pick`
+chooses from that theme's wallpaper tree instead of
+`~/Pictures/walls/{light,dark}`.
+
+Press **`Super+Shift+T`** for the rofi theme picker, or apply a theme directly:
+
+```bash
+theme-set mclaren
+theme-set mclaren dark
+rice-theme --list
+```
+
+Static palettes are pre-validated with `rice-contrast --check`. Switching a
+theme runs `rice-contrast --trusted`, which renders every template without
+re-adjusting the colours. The active theme is recorded in
+`~/.cache/rice/theme-name`, and the engine marker is `static`.
+
+Return to wallpaper-derived colours with an explicit engine override:
+
+```bash
+RICE_THEME_ENGINE=hellwal wall next
+```
+
+The bundled **McLaren F1** theme uses papaya orange, carbon surfaces, and the
+wallpapers in `~/Pictures/walls/mclaren/{light,dark}`.
 
 ### Contrast and transparency
 
@@ -253,6 +294,7 @@ Wallpaper binds (always inside the current light/dark mode):
 | `Super+Shift+F6` | previous wallpaper |
 | `Super+F7` | random wallpaper |
 | `Super+F8` | pick with thumbnails |
+| `Super+Shift+T` | static theme picker |
 
 The chosen wallpaper is also symlinked to `~/.cache/rice/wallpaper`.
 `rice-resume` reapplies it after login and sleep, so the selection survives a

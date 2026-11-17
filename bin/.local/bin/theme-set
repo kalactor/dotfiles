@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+# usage: theme-set THEME [light|dark]
+#        theme-set --list
+# Apply a pre-validated static theme from ~/.config/rice/themes/THEME.
+set -uo pipefail
+
+CACHE="$HOME/.cache/rice"
+THEMES="$HOME/.config/rice/themes"
+
+die() { printf 'theme-set: %s\n' "$*" >&2; exit 1; }
+
+expand_path() {
+    case "$1" in
+        "~")   printf '%s\n' "$HOME" ;;
+        "~/"*) printf '%s/%s\n' "$HOME" "${1#\~/}" ;;
+        *)     printf '%s\n' "$1" ;;
+    esac
+}
+
+theme_conf_value() {
+    local theme="$1" want="$2" file key value
+    file="$THEMES/$theme/theme.conf"
+    [ -f "$file" ] || return 1
+    while IFS='=' read -r key value; do
+        [ "$key" = "$want" ] && { printf '%s\n' "$value"; return 0; }
+    done < "$file"
+    return 1
+}
+
+list_themes() {
+    local dir name description
+    find "$THEMES" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort | while read -r dir; do
+        [ -f "$dir/theme.conf" ] || continue
+        name=$(theme_conf_value "$(basename "$dir")" name 2>/dev/null || true)
+        description=$(theme_conf_value "$(basename "$dir")" description 2>/dev/null || true)
+        [ -n "$name" ] || name=$(basename "$dir")
+        printf '%s\t%s\t%s\n' "$name" "$(basename "$dir")" "$description"
+    done
+}
+
+pick_wall() {
+    local mode="$1" root="$2" default saved file
+    local -a files=()
+
+    default=$(theme_conf_value "$theme" "default_$mode" 2>/dev/null || true)
+    if [ -n "$default" ]; then
+        default=$(expand_path "$default")
+        if [ -f "$default" ]; then
+            printf '%s\n' "$default"
+            return 0
+        fi
+    fi
+
+    saved="$CACHE/wallpaper-$mode"
+    if [ -f "$saved" ]; then
+        file=$(<"$saved")
+        if [ -n "$file" ] && [ -f "$file" ] && [[ "$file" == "$root/$mode/"* ]]; then
+            printf '%s\n' "$file"
+            return 0
+        fi
+    fi
+
+    mapfile -d '' -t files < <(
+        find "$root/$mode" -maxdepth 1 -type f \
+            \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \
+               -o -iname '*.webp' -o -iname '*.jxl' \) \
+            -print0 2>/dev/null | sort -z
+    )
+    [ "${#files[@]}" -gt 0 ] || return 1
+    printf '%s\n' "${files[0]}"
+}
+
+if [ "${1:-}" = "--list" ]; then
+    list_themes
+    exit 0
+fi
+
+theme="${1:-}"
+[ -n "$theme" ] || die "usage: theme-set THEME [light|dark]"
+[ -d "$THEMES/$theme" ] || die "no such theme: $theme"
+[ -f "$THEMES/$theme/theme.conf" ] || die "theme metadata missing: $THEMES/$theme/theme.conf"
+
+mode="${2:-}"
+if [ -z "$mode" ]; then
+    if command -v rice-mode >/dev/null 2>&1; then
+        mode=$(rice-mode current 2>/dev/null || true)
+    fi
+    if [ -z "$mode" ]; then
+        mode=$(cat "$CACHE/effective-mode" 2>/dev/null || true)
+    fi
+fi
+case "$mode" in
+    light|dark) ;;
+    *) die "invalid mode: ${mode:-unset}" ;;
+esac
+
+[ -f "$THEMES/$theme/$mode.env" ] || die "theme palette missing: $THEMES/$theme/$mode.env"
+
+root=$(theme_conf_value "$theme" wallpaper_root 2>/dev/null || true)
+[ -n "$root" ] || die "theme has no wallpaper_root: $theme"
+root=$(expand_path "$root")
+[ -d "$root/$mode" ] || die "theme wallpaper directory missing: $root/$mode"
+
+wallpaper=$(pick_wall "$mode" "$root") || die "no wallpapers in $root/$mode"
+
+# Let wall handle the hyprpaper update, mode bookkeeping, and theme-apply.
+# theme-apply reads the static palette and renders it without re-adjusting it.
+if ! RICE_THEME_ENGINE=static RICE_THEME_NAME="$theme" \
+        "$HOME/.local/bin/wall" set "$wallpaper"; then
+    die "could not apply theme: $theme"
+fi
+
+name=$(theme_conf_value "$theme" name 2>/dev/null || printf '%s\n' "$theme")
+notify-send "Theme" "$name" 2>/dev/null || true

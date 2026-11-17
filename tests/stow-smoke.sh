@@ -35,6 +35,8 @@ for path in \
     .local/bin/rice-emoji \
     .local/bin/rice-screenshot \
     .local/bin/rice-contrast \
+    .local/bin/theme-set \
+    .local/bin/rice-theme \
     .local/share/rice/telegram-base.tdesktop-palette \
     .config/systemd/user/rice-sun.timer \
     .zshrc \
@@ -71,11 +73,18 @@ grep -q 'specialWorkspace' "$target/.config/hypr/look.lua"
 grep -q 'logout_dialog' "$target/.config/hypr/rules.lua"
 grep -q 'wlogout-tile-in' "$target/.config/wlogout/style.css"
 
-# hellwal is the active palette engine; matugen and the legacy wallust path
-# remain available as alternatives.
-grep -q 'RICE_THEME_ENGINE:-hellwal' "$target/.local/bin/theme-apply"
+# hellwal is the default palette engine; an explicit RICE_THEME_ENGINE or the
+# recorded engine marker overrides it.  Matugen and wallust remain available.
+grep -Fq 'RICE_THEME_ENGINE:-$(cat' "$target/.local/bin/theme-apply"
+grep -Fq 'engine=hellwal' "$target/.local/bin/theme-apply"
 grep -q 'colors.surface_container_low' "$target/.config/matugen/templates/palette.env"
 grep -q 'hellwal)' "$target/.local/bin/theme-apply"
 grep -q '%%background.hex%%' "$target/.config/hellwal/templates/palette.env"
+
+# Static themes ship with pre-validated light/dark palettes and theme wallpapers.
+grep -q '^wallpaper_root=' "$target/.config/rice/themes/mclaren/theme.conf"
+grep -q '^selection_fg=' "$target/.config/rice/themes/mclaren/light.env"
+grep -q '^selection_fg=' "$target/.config/rice/themes/mclaren/dark.env"
+grep -q 'theme-set' "$target/.local/bin/rice-theme"
 
 printf 'stow-smoke: all %d packages restored into an isolated HOME; numeric workspaces intact\n' "${#packages[@]}"

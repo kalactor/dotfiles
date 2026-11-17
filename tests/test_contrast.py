@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+import io
 import tempfile
 import unittest
 from pathlib import Path
@@ -170,6 +172,43 @@ class PaletteTests(unittest.TestCase):
         palette = self.rc.compute_palette(BASE_DARK, ANSI_DARK, "#211719")
         self.assertEqual(self.rc.check_palette(palette, "#211719"), [])
         self.assertGreaterEqual(self.rc.contrast(palette["foreground"], "#211719"), 6.95)
+
+    def test_static_theme_palettes_pass_contrast(self):
+        themes = ROOT / "rice" / ".config" / "rice" / "themes" / "mclaren"
+        for mode in ("light", "dark"):
+            palette = self.rc.read_palette(themes / f"{mode}.env")
+            self.assertTrue(set(self.rc.STATIC_REQUIRED_KEYS) <= set(palette))
+            self.assertEqual(
+                self.rc.check_palette(palette, palette["effective_background"]),
+                [],
+                f"{mode} static palette regressed",
+            )
+
+    def test_trusted_palette_is_not_adjusted(self):
+        source = (
+            ROOT / "rice" / ".config" / "rice" / "themes" / "mclaren" / "light.env"
+        )
+        expected = self.rc.read_palette(source)
+        with tempfile.TemporaryDirectory() as directory:
+            palette = Path(directory) / "colors.env"
+            palette.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+            self.assertEqual(
+                self.rc.main(
+                    ["--palette-file", str(palette), "--trusted", "--no-render", "--quiet"]
+                ),
+                0,
+            )
+            self.assertEqual(self.rc.read_palette(palette), expected)
+
+    def test_trusted_palette_rejects_missing_keys(self):
+        with tempfile.TemporaryDirectory() as directory:
+            palette = Path(directory) / "colors.env"
+            palette.write_text("background=#ffffff\n", encoding="utf-8")
+            with contextlib.redirect_stderr(io.StringIO()):
+                status = self.rc.main(
+                    ["--palette-file", str(palette), "--trusted", "--no-render", "--quiet"]
+                )
+            self.assertNotEqual(status, 0)
 
     def test_inverted_ansi_black_white_pair_is_normalized(self):
         # hellwal's light palette maps color0 to the background and color7 to

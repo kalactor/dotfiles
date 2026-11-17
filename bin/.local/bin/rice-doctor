@@ -15,7 +15,8 @@ for c in hyprctl waybar swaync swaync-client rofi wlogout hyprpaper \
          gnome-keyring-daemon hyprsunset swayosd-server ddcutil hyprpicker \
          qt6ct kvantummanager btop cava rice-gtk-reload rice-mode wall theme-apply \
          rice-resume rice-keybinds rice-calculator rice-emoji rice-screenshot \
-         tesseract qalc rice-contrast kde-theme dolphin-view-defaults telegram-theme; do
+         tesseract qalc rice-contrast kde-theme dolphin-view-defaults telegram-theme \
+         theme-set rice-theme; do
     command -v "$c" >/dev/null 2>&1 && ok "$c" || bad "$c missing"
 done
 command -v hellwal >/dev/null 2>&1 && ok "hellwal (default engine)" \
@@ -59,11 +60,24 @@ case "$engine" in
     matugen) engine_palette="$HOME/.cache/rice/matugen.env" ;;
     hellwal) engine_palette="$HOME/.cache/rice/hellwal/palette.env" ;;
     wallust) engine_palette="$HOME/.cache/rice/colors.env" ;;
+    static)
+        theme=$(cat "$HOME/.cache/rice/theme-name" 2>/dev/null || true)
+        if [ -z "$theme" ]; then
+            bad "static theme selected but theme-name marker is missing"
+            engine_palette=""
+        else
+            mode=$(cat "$HOME/.cache/rice/theme-mode" 2>/dev/null || printf 'dark')
+            engine_palette="$HOME/.config/rice/themes/$theme/$mode.env"
+        fi
+        ;;
     *) bad "unknown theme engine: $engine"; engine_palette="" ;;
 esac
 if [ -n "$engine_palette" ]; then
     [ -s "$engine_palette" ] && ok "active engine: $engine" \
         || bad "active engine palette missing: ${engine_palette#$HOME/}"
+fi
+if [ "$engine" = static ] && [ -n "${theme:-}" ]; then
+    ok "static theme: $theme ($mode)"
 fi
 
 echo "Generated theme files:"
@@ -143,8 +157,18 @@ if command -v rice-mode >/dev/null 2>&1; then
         [ -n "$sunset" ] && ok "sunset $sunset" || warn "sunset unavailable"
         ok "location $(jq -r '.location' <<<"$mode_json")"
         wallpaper=$(jq -r '.wallpaper // empty' <<<"$mode_json")
+        wall_root="$HOME/Pictures/walls"
+        if [ "$engine" = static ] && [ -n "${theme:-}" ]; then
+            theme_root=$(awk -F= '$1=="wallpaper_root" {sub(/^[^=]*=/, ""); print; exit}' \
+                "$HOME/.config/rice/themes/$theme/theme.conf" 2>/dev/null)
+            case "$theme_root" in
+                "~")   theme_root="$HOME" ;;
+                "~/"*) theme_root="$HOME/${theme_root#\~/}" ;;
+            esac
+            [ -n "$theme_root" ] && wall_root="$theme_root"
+        fi
         case "$wallpaper" in
-            "$HOME/Pictures/walls/$effective"/*) ok "wallpaper matches $effective mode" ;;
+            "$wall_root/$effective"/*) ok "wallpaper matches $effective mode" ;;
             "") bad "no wallpaper for $effective mode" ;;
             *) bad "wallpaper is outside $effective mode: $wallpaper" ;;
         esac
