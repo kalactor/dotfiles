@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+# rice-logout — HyDE-style attached wlogout menu.
+#
+# The 2×2 tile block is sized from the focused monitor.  Icons are staged in
+# both surface and selection colours so the glyphs stay readable when a tile
+# fills with the palette selection colour on hover/focus.
+# wlogout reads a staged copy in ~/.cache/rice/wlogout because the icon and
+# colour imports are relative to the stylesheet.
+set -uo pipefail
+
+if pgrep -x wlogout >/dev/null 2>&1; then
+    pkill -x wlogout
+    exit 0
+fi
+
+conf="$HOME/.config/wlogout"
+stage="$HOME/.cache/rice/wlogout"
+icons="$stage/icons"
+
+[ -f "$conf/style.css" ] || { notify-send -u critical "wlogout" "Missing $conf/style.css"; exit 1; }
+[ -f "$conf/colors.css" ] || { notify-send -u critical "wlogout" "Missing $conf/colors.css; apply a theme first"; exit 1; }
+[ -f "$conf/layout" ] || { notify-send -u critical "wlogout" "Missing $conf/layout"; exit 1; }
+
+mkdir -p "$stage"
+cp -f "$conf/style.css" "$stage/style.css"
+cp -f "$conf/colors.css" "$stage/colors.css"
+
+palette="$HOME/.cache/rice/colors.env"
+colour() {
+    awk -F= -v key="$1" '$1 == key { print $2; exit }' "$palette" 2>/dev/null
+}
+
+# Pick the glyph colour that wins the contrast ratio against a background.
+icon_set() {
+    local hex=${1#\#}
+    if [ "${#hex}" -ne 6 ]; then
+        printf 'white'
+        return
+    fi
+    local r=$((16#${hex:0:2}))
+    local g=$((16#${hex:2:2}))
+    local b=$((16#${hex:4:2}))
+    awk -v r="$r" -v g="$g" -v b="$b" '
+        function lin(c) { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ^ 2.4 }
+        BEGIN {
+            l = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+            print ((l + 0.05) / 0.05 >= 1.05 / (l + 0.05)) ? "black" : "white"
+        }'
+}
+
+stage_icons() {
+    local dir="$1" background="$2" set
+    set=$(icon_set "$background")
+    mkdir -p "$icons/$dir"
+    for name in lock logout shutdown reboot; do
+        local source_icon="$conf/icons/${name}_${set}.png"
+        [ -f "$source_icon" ] || source_icon="$conf/icons/${name}_white.png"
+        cp -f "$source_icon" "$icons/$dir/$name.png"
+    done
+}
+
+stage_icons base "$(colour surface)"
+stage_icons active "$(colour selection_bg)"
+
+# HyDE style 2 insets the block by 35% horizontally and 25% vertically.  The
+# grid margins reproduce that block size without per-button CSS variables.
+monitor=$(hyprctl -j monitors 2>/dev/null \
+    | jq -r '.[] | select(.focused) | "\(.width) \(.height) \(.scale)"' \
+    | head -n1)
+read -r width height scale <<<"${monitor:-1920 1080 1}"
+width=${width:-1920}
+height=${height:-1080}
+scale=${scale:-1}
+
+inset() {
+    awk -v size="$1" -v percent="$2" -v scale="$3" \
+        'BEGIN { printf "%d", (size * percent / 100) / scale }'
+}
+x_margin=$(inset "$width" 35 "$scale")
+y_margin=$(inset "$height" 25 "$scale")
+
+exec wlogout -b 2 -c 0 -r 0 \
+    -L "$x_margin" -R "$x_margin" -T "$y_margin" -B "$y_margin" \
+    --layout "$conf/layout" \
+    --css "$stage/style.css" \
+    --protocol layer-shell

@@ -71,7 +71,14 @@ grep -q 'SHIFT + X' "$target/.config/hypr/binds.lua"
 grep -q 'windowsMove' "$target/.config/hypr/look.lua"
 grep -q 'specialWorkspace' "$target/.config/hypr/look.lua"
 grep -q 'logout_dialog' "$target/.config/hypr/rules.lua"
-grep -q 'wlogout-tile-in' "$target/.config/wlogout/style.css"
+grep -q 'cubic-bezier(0.55, 0, 0.28, 1.682)' "$target/.config/wlogout/style.css"
+grep -q 'button:hover#lock' "$target/.config/wlogout/style.css"
+grep -q 'selection_bg' "$target/.config/wallust/templates/wlogout-colors.css"
+grep -q 'rice-logout' "$target/.config/hypr/binds.lua"
+[ -x "$target/.local/bin/rice-logout" ]
+[ "$(grep -c '"label"' "$target/.config/wlogout/layout")" -eq 4 ]
+[ -f "$target/.config/wlogout/icons/lock_white.png" ]
+[ -f "$target/.config/wlogout/icons/lock_black.png" ]
 
 # hellwal is the default palette engine; an explicit RICE_THEME_ENGINE or the
 # recorded engine marker overrides it.  Matugen and wallust remain available.

@@ -16,7 +16,7 @@ for c in hyprctl waybar swaync swaync-client rofi wlogout hyprpaper \
          qt6ct kvantummanager btop cava rice-gtk-reload rice-mode wall theme-apply \
          rice-resume rice-keybinds rice-calculator rice-emoji rice-screenshot \
          tesseract qalc rice-contrast kde-theme dolphin-view-defaults telegram-theme \
-         theme-set rice-theme; do
+         theme-set rice-theme rice-logout; do
     command -v "$c" >/dev/null 2>&1 && ok "$c" || bad "$c missing"
 done
 command -v hellwal >/dev/null 2>&1 && ok "hellwal (default engine)" \

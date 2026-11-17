@@ -9,6 +9,8 @@
 @define-color accent {{ accent }};
 @define-color accent_alt {{ accent_alt }};
 @define-color accent_fg {{ accent_fg }};
+@define-color selection_bg {{ selection_bg }};
+@define-color selection_fg {{ selection_fg }};
 @define-color danger {{ danger }};
 @define-color success {{ success }};
 @define-color warning {{ warning }};

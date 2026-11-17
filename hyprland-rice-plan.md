@@ -280,7 +280,7 @@ require("autostart")
 - [x] rofi installed; `Super+A` opens `rofi -show drun`
 - [x] App launcher imports generated `colors.rasi`; opens on the focused monitor (`monitor: "-1"`)
 - [x] Wallpaper picker with thumbnails (`wall pick`)
-- [~] Power menu: **wlogout** is installed and bound to `Super+Backspace`; the planned rofi `power-menu` is not implemented (keep wlogout or switch)
+- [x] Power menu: **wlogout** uses HyDE's attached 2×2 layout via `rice-logout`, bound to `Super+Backspace`; the planned rofi `power-menu` is not implemented
 - [x] Clipboard picker (`Super+Shift+V` -> `rice-clipboard`)
 - [x] Calculator mode (`Super+Ctrl+C`, qalc) and emoji mode (`Super+Ctrl+E`)
 - [x] Live keybind cheat sheet in rofi (`Super+F1`, reads `hyprctl binds -j`)
@@ -425,7 +425,7 @@ and in `look.lua`: `local ok, c = pcall(require, "colors")` then build `"rgba(" 
 | `rice-emoji` | rofi emoji picker backed by tracked catalog | [x] working; copies selection |
 | `screenshot-*` | currently inline in `binds.lua`; optionally move into scripts | [~] 4 binds work inline |
 
-> Current `~/.local/bin`: the tracked scripts above plus `rice-mode`, `kde-theme`, `telegram-theme`, `dolphin-view-defaults`, `rice-brightness`, `rice-nightlight`, `rice-clipboard`, `rice-doctor`, `rice-restart`, `gsr-status`, `gsr-toggle`, `wlogout` covers the power menu. External personal integrations such as `seed4` are optional and not part of a fresh baseline install.
+> Current `~/.local/bin`: the tracked scripts above plus `rice-mode`, `kde-theme`, `telegram-theme`, `dolphin-view-defaults`, `rice-brightness`, `rice-nightlight`, `rice-clipboard`, `rice-doctor`, `rice-restart`, `gsr-status`, `gsr-toggle`, and `rice-logout` (HyDE-style attached wlogout menu). External personal integrations such as `seed4` are optional and not part of a fresh baseline install.
 
 ### `theme-apply` (the single "recolor everything" command)
 ```bash

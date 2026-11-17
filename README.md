@@ -19,7 +19,7 @@ rice-mode status
 | `waybar/.config/waybar/` | bar config + CSS (imports generated `colors.css`) |
 | `swaync/.config/swaync/` | notification daemon + CSS |
 | `rofi/.config/rofi/` | launcher (imports generated `colors.rasi`) |
-| `wlogout/.config/wlogout/` | power menu (imports generated `colors.css`) |
+| `wlogout/.config/wlogout/` | HyDE-style attached 2×2 power menu (`rice-logout`, imports generated `colors.css`) |
 | `kitty/.config/kitty/` | terminal (includes generated `colors.conf`) |
 | `btop/.config/btop/` | resource monitor (generated `themes/wallust.theme`) |
 | `cava/.config/cava/` | audio visualizer (generated `themes/wallust`) |
@@ -408,8 +408,12 @@ rice-screenshot ocr
 Hyprland uses a Material 3-inspired preset: spring-based window movement,
 crisp pop-in/out for windows, slide-fade workspace changes, slide-fade special
 workspaces, and fading layers. wlogout is matched on its real `logout_dialog`
-layer namespace, so its backdrop is blurred and the overlay fades in; its tiles
-also transition and stagger in.
+layer namespace, so its backdrop is blurred and the overlay fades in. Its four
+tiles use HyDE's attached 2×2 layout: only the outer corners are rounded, and
+hover/focus fills the tile with the palette selection colour while expanding it
+toward its corner with HyDE's springy `cubic-bezier`. `rice-logout` picks the
+monitor-sized margin block and a black or white icon set from the active
+palette, so the menu stays readable in both light and dark themes.
 
 ## Health / restart
 

@@ -1,6 +1,15 @@
 /*
- * wlogout — Arch + Hyprland
- * Colors come from wallust via colors.css (theme-apply / wall).
+ * wlogout — HyDE-style attached 2×2 power menu.
+ *
+ * The four tiles are attached (no gaps) and only their outer corners are
+ * rounded.  Hover/focus fills the tile with the palette selection colour and
+ * grows it toward its corner with HyDE's springy cubic-bezier, which is the
+ * real motion in HyDE's style 2: GTK3 supports transitions but not the
+ * `gradient_f` keyframes that HyDE references.
+ *
+ * `rice-logout` selects a monitor-sized margin block and stages a black or
+ * white icon set for both the surface and selection backgrounds, then launches
+ * wlogout with this file.  Palette colours come from colors.css.
  */
 
 @import "colors.css";
@@ -10,112 +19,97 @@
     box-shadow: none;
     text-shadow: none;
     outline: none;
+    font-family: "Inter", "Noto Sans", sans-serif;
+    font-size: 20px;
 }
 
 window {
-    background-color: alpha(@background, 0.78);
+    background-color: transparent;
 }
 
-/* Individual action tiles */
+/* Attached tiles: flat, opaque surfaces so the wallpaper shows around them. */
 button {
     color: @foreground;
-    /* Tint the tiles with the wallpaper accent instead of a flat neutral. */
-    background-color: mix(@background, @accent, 0.18);
-
-    border: 1px solid alpha(@accent, 0.50);
-    border-radius: 22px;
-
-    min-width: 176px;
-    min-height: 154px;
-    margin: 8px;
-    padding: 18px;
-
-    font-family: "Inter", "Noto Sans", sans-serif;
-    font-size: 15px;
-    font-weight: 600;
+    background-color: @surface;
+    border: none;
+    border-radius: 0;
+    padding: 0;
 
     background-repeat: no-repeat;
-    background-position: center 34%;
-    background-size: 30%;
+    background-position: center;
+    background-size: 10%;
 
-    /* GTK3 animates the tile itself; Hyprland fades the whole layer. */
     transition:
-        background-color 180ms cubic-bezier(0.2, 0, 0, 1),
-        border-color 180ms cubic-bezier(0.2, 0, 0, 1),
-        color 180ms cubic-bezier(0.2, 0, 0, 1),
-        box-shadow 180ms cubic-bezier(0.2, 0, 0, 1);
-
-    animation: wlogout-tile-in 240ms cubic-bezier(0.05, 0.7, 0.1, 1) both;
+        background-color 300ms cubic-bezier(0.55, 0, 0.28, 1.682),
+        border-radius 300ms cubic-bezier(0.55, 0, 0.28, 1.682),
+        margin 300ms cubic-bezier(0.55, 0, 0.28, 1.682),
+        background-size 300ms cubic-bezier(0.55, 0, 0.28, 1.682),
+        color 300ms cubic-bezier(0.55, 0, 0.28, 1.682);
 }
 
-@keyframes wlogout-tile-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-/* Keep labels readable beneath the icon */
-button label {
-    color: @foreground;
-    margin-top: 76px;
-}
-
-/* Hover / keyboard focus */
 button:hover,
 button:focus {
-    color: @foreground;
-    background-color: alpha(@accent, 0.35);
-    border-color: alpha(@accent, 0.90);
-    box-shadow: 0 6px 20px alpha(@accent, 0.22);
+    color: @selection_fg;
+    background-color: @selection_bg;
+    background-size: 25%;
 }
 
 button:active {
-    background-color: alpha(@accent, 0.52);
-    border-color: @accent_alt;
-    box-shadow: 0 2px 8px alpha(@accent, 0.25);
+    color: @selection_fg;
+    background-color: @selection_bg;
+    background-size: 28%;
 }
 
-/* Action icons — use the standard wlogout icon locations */
+button label {
+    color: inherit;
+}
+
+/* Outer corners only; the inner edges stay flush. */
 #lock {
-    background-image: image(url("/usr/share/wlogout/icons/lock.png"), url("/usr/local/share/wlogout/icons/lock.png"));
-    animation-delay: 0ms;
-}
-
-#suspend {
-    background-image: image(url("/usr/share/wlogout/icons/suspend.png"), url("/usr/local/share/wlogout/icons/suspend.png"));
-    animation-delay: 20ms;
-}
-
-#hibernate {
-    background-image: image(url("/usr/share/wlogout/icons/hibernate.png"), url("/usr/local/share/wlogout/icons/hibernate.png"));
-    animation-delay: 40ms;
+    background-image: image(url("icons/base/lock.png"), url("/usr/share/wlogout/icons/lock.png"), url("/usr/local/share/wlogout/icons/lock.png"));
+    border-radius: 30px 0 0 0;
 }
 
 #logout {
-    background-image: image(url("/usr/share/wlogout/icons/logout.png"), url("/usr/local/share/wlogout/icons/logout.png"));
-    animation-delay: 60ms;
-}
-
-#reboot {
-    background-image: image(url("/usr/share/wlogout/icons/reboot.png"), url("/usr/local/share/wlogout/icons/reboot.png"));
-    animation-delay: 80ms;
+    background-image: image(url("icons/base/logout.png"), url("/usr/share/wlogout/icons/logout.png"), url("/usr/local/share/wlogout/icons/logout.png"));
+    border-radius: 0 0 0 30px;
 }
 
 #shutdown {
-    background-image: image(url("/usr/share/wlogout/icons/shutdown.png"), url("/usr/local/share/wlogout/icons/shutdown.png"));
-    animation-delay: 100ms;
+    background-image: image(url("icons/base/shutdown.png"), url("/usr/share/wlogout/icons/shutdown.png"), url("/usr/local/share/wlogout/icons/shutdown.png"));
+    border-radius: 0 30px 0 0;
 }
 
-/* Give destructive power actions a subtle warm hover */
-#shutdown:hover,
-#shutdown:focus {
-    background-color: alpha(@danger, 0.35);
-    border-color: @danger;
-    box-shadow: 0 6px 20px alpha(@danger, 0.22);
+#reboot {
+    background-image: image(url("icons/base/reboot.png"), url("/usr/share/wlogout/icons/reboot.png"), url("/usr/local/share/wlogout/icons/reboot.png"));
+    border-radius: 0 0 30px 0;
 }
 
-#reboot:hover,
-#reboot:focus {
-    background-color: alpha(@accent, 0.35);
-    border-color: @accent;
-    box-shadow: 0 6px 20px alpha(@accent, 0.22);
+/* Hover/focus expands each tile toward its outer corner, as in HyDE style 2. */
+button:hover#lock,
+button:focus#lock {
+    background-image: image(url("icons/active/lock.png"), url("/usr/share/wlogout/icons/lock.png"), url("/usr/local/share/wlogout/icons/lock.png"));
+    border-radius: 22px 22px 0 22px;
+    margin: -54px 0 0 -58px;
+}
+
+button:hover#logout,
+button:focus#logout {
+    background-image: image(url("icons/active/logout.png"), url("/usr/share/wlogout/icons/logout.png"), url("/usr/local/share/wlogout/icons/logout.png"));
+    border-radius: 22px 0 22px 22px;
+    margin: 0 0 -54px -58px;
+}
+
+button:hover#shutdown,
+button:focus#shutdown {
+    background-image: image(url("icons/active/shutdown.png"), url("/usr/share/wlogout/icons/shutdown.png"), url("/usr/local/share/wlogout/icons/shutdown.png"));
+    border-radius: 22px 22px 22px 0;
+    margin: -54px -58px 0 0;
+}
+
+button:hover#reboot,
+button:focus#reboot {
+    background-image: image(url("icons/active/reboot.png"), url("/usr/share/wlogout/icons/reboot.png"), url("/usr/local/share/wlogout/icons/reboot.png"));
+    border-radius: 0 22px 22px 22px;
+    margin: 0 -58px -54px 0;
 }
