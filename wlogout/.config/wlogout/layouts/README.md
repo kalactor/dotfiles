@@ -11,6 +11,12 @@ Each directory is a complete wlogout layout:
 stages the stylesheet and icons in `~/.cache/rice/wlogout`, and remembers the
 last choice in `~/.cache/rice/wlogout-layout`.
 
+Every stylesheet defines the same motion: a `wl-in` entrance that fades the
+tiles in and pops their glyphs, staggered across the grid, and a hover
+transition that fills the tile and grows its glyph with HyDE's springy
+`cubic-bezier(0.55, 0, 0.28, 1.682)`. The entrance uses `animation-fill-mode:
+backwards`, so it does not override the hover state once it finishes.
+
 ## Presets
 
 | Directory | Idea | Upstream |

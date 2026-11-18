@@ -41,15 +41,15 @@ button {
         background-color 180ms cubic-bezier(0.2, 0, 0, 1),
         color 180ms cubic-bezier(0.2, 0, 0, 1),
         border-color 180ms cubic-bezier(0.2, 0, 0, 1),
-        border-radius 220ms cubic-bezier(0.2, 0, 0, 1),
-        background-size 220ms cubic-bezier(0.2, 0, 0, 1);
+        border-radius 300ms cubic-bezier(0.55, 0, 0.28, 1.682),
+        background-size 300ms cubic-bezier(0.55, 0, 0.28, 1.682);
 }
 
 button:hover {
     color: @selection_fg;
     background-color: @selection_bg;
     border-color: transparent;
-    background-size: 18%;
+    background-size: 25%;
 }
 
 /* The first button is focused on open.  A faint ring shows keyboard focus
@@ -60,7 +60,7 @@ button:focus {
 }
 
 button:active {
-    background-size: 20%;
+    background-size: 28%;
 }
 
 button label {
@@ -107,3 +107,18 @@ button:hover#reboot {
     background-image: image(url("icons/active/reboot.png"), url("/usr/share/wlogout/icons/reboot.png"));
     border-radius: 22px;
 }
+
+/* Entrance: tiles fade in and their glyphs pop, staggered across the grid. */
+@keyframes wl-in {
+    from { opacity: 0; background-size: 0%; }
+    to { opacity: 1; background-size: 10%; }
+}
+
+button {
+    animation: wl-in 260ms cubic-bezier(0.2, 0, 0, 1) backwards;
+}
+
+#lock { animation-delay: 0ms; }
+#shutdown { animation-delay: 25ms; }
+#logout { animation-delay: 50ms; }
+#reboot { animation-delay: 75ms; }

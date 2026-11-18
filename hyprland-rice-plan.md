@@ -280,7 +280,7 @@ require("autostart")
 - [x] rofi installed; `Super+A` opens `rofi -show drun`
 - [x] App launcher imports generated `colors.rasi`; opens on the focused monitor (`monitor: "-1"`)
 - [x] Wallpaper picker with thumbnails (`wall pick`)
-- [x] Power menu: **wlogout** via `rice-logout`, bound to `Super+Backspace`; ten selectable layouts (`attached`, `grid`, `pills`, `cards`, `capsule`, `glass`, `modern`, `minimal`, `mosaic`, `compact`) with a rofi picker on `Super+Shift+Backspace` and cycle on `Super+Ctrl+Backspace`; the planned rofi `power-menu` is not implemented
+- [x] Power menu: **wlogout** via `rice-logout`, bound to `Super+Backspace`; ten selectable layouts (`attached`, `grid`, `pills`, `cards`, `capsule`, `glass`, `modern`, `minimal`, `mosaic`, `compact`) with a rofi picker on `Super+Shift+Backspace` and cycle on `Super+Ctrl+Backspace`; every layout plays a staggered `wl-in` entrance and uses the springy hover transition; the planned rofi `power-menu` is not implemented
 - [x] Clipboard picker (`Super+Shift+V` -> `rice-clipboard`)
 - [x] Calculator mode (`Super+Ctrl+C`, qalc) and emoji mode (`Super+Ctrl+E`)
 - [x] Live keybind cheat sheet in rofi (`Super+F1`, reads `hyprctl binds -j`)

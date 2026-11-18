@@ -415,11 +415,14 @@ default menu is HyDE's attached 2×2 layout: only the outer corners are rounded,
 and hover fills the tile with the palette selection colour while easing its
 corners and glyph outward. The old version animated GTK margins, which forced a
 grid relayout on every frame; the current version animates colour, radius, and
-background size only, so the motion stays smooth. Focus is a faint ring rather
-than a fill, which keeps the first tile neutral when the menu opens.
-`rice-logout` sizes the block from the focused monitor, confines wlogout to that
-monitor, and stages black or white icons against the active surface and
-selection colours.
+background size only, so the motion stays smooth. Every layout also plays a
+short entrance: the tiles fade in and their glyphs pop, staggered across the
+grid, using GTK's own CSS animations. Geometry uses HyDE's springy
+`cubic-bezier(0.55, 0, 0.28, 1.682)`, while colours use a gentler curve. Focus
+is a faint ring rather than a fill, which keeps the first tile neutral when the
+menu opens. `rice-logout` sizes the block from the focused monitor, confines
+wlogout to that monitor, and stages black or white icons against the active
+surface and selection colours.
 
 ### Power menu layouts
 
@@ -445,7 +448,9 @@ Each layout is a directory under `~/.config/wlogout/layouts/<name>/` containing
 picker metadata). Add a directory there to make a new layout appear in the
 picker; no launcher changes are needed. The CSS files are original adaptations
 of the referenced layouts and use the rice palette rather than hard-coded
-colours.
+colours. Each one defines the same `wl-in` entrance animation and the springy
+hover transition, so a new preset inherits the motion if it copies the shared
+`button` block.
 
 ## Health / restart
 
