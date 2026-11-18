@@ -1,0 +1,114 @@
+/*
+ * mosaic — LierB.
+ *
+ * Four quadrants with a coloured rule along the top edge, one palette role
+ * per action.  The tiles stay on the surface colour so the staged black or
+ * white icons keep their contrast in both light and dark themes; the colour
+ * lives in the rule and the hover wash.
+ *
+ * Inspired by LierB/dotfiles (GPL-3.0).
+ * Palette roles come from colors.css; icons are staged by rice-logout.
+ */
+
+@import "colors.css";
+
+* {
+    background-image: none;
+    box-shadow: none;
+    text-shadow: none;
+    outline-style: none;
+    font-family: "Inter", "Noto Sans", sans-serif;
+    font-size: 20px;
+}
+
+window {
+    background-color: transparent;
+}
+
+button {
+    color: @foreground;
+    background-color: @surface;
+    border: 2px solid transparent;
+    border-top: 6px solid @accent;
+    border-radius: 0;
+    padding: 0;
+
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 16%;
+
+    transition:
+        background-color 180ms cubic-bezier(0.2, 0, 0, 1),
+        border-color 180ms cubic-bezier(0.2, 0, 0, 1),
+        color 180ms cubic-bezier(0.2, 0, 0, 1),
+        border-radius 220ms cubic-bezier(0.2, 0, 0, 1),
+        background-size 220ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+button:hover {
+    color: @selection_fg;
+    background-color: @selection_bg;
+    border-color: transparent;
+    border-top-color: @selection_fg;
+    background-size: 26%;
+}
+
+button:focus {
+    border-bottom-color: alpha(@foreground, 0.20);
+    background-size: 18%;
+}
+
+button:active {
+    background-size: 28%;
+}
+
+button label {
+    color: inherit;
+}
+
+#lock {
+    background-image: image(url("icons/base/lock.png"), url("/usr/share/wlogout/icons/lock.png"));
+    border-top-color: @accent;
+    border-radius: 28px 0 0 0;
+}
+
+#logout {
+    background-image: image(url("icons/base/logout.png"), url("/usr/share/wlogout/icons/logout.png"));
+    border-top-color: @accent_alt;
+    border-radius: 0 0 0 28px;
+}
+
+#shutdown {
+    background-image: image(url("icons/base/shutdown.png"), url("/usr/share/wlogout/icons/shutdown.png"));
+    border-top-color: @danger;
+    border-radius: 0 28px 0 0;
+}
+
+#reboot {
+    background-image: image(url("icons/base/reboot.png"), url("/usr/share/wlogout/icons/reboot.png"));
+    border-top-color: @info;
+    border-radius: 0 0 28px 0;
+}
+
+button:hover#lock,
+button:hover#logout,
+button:hover#shutdown,
+button:hover#reboot {
+    border-radius: 22px;
+}
+
+button:hover#lock {
+    background-image: image(url("icons/active/lock.png"), url("/usr/share/wlogout/icons/lock.png"));
+}
+
+button:hover#logout {
+    background-image: image(url("icons/active/logout.png"), url("/usr/share/wlogout/icons/logout.png"));
+}
+
+button:hover#shutdown {
+    background-image: image(url("icons/active/shutdown.png"), url("/usr/share/wlogout/icons/shutdown.png"));
+}
+
+button:hover#reboot {
+    background-image: image(url("icons/active/reboot.png"), url("/usr/share/wlogout/icons/reboot.png"));
+}

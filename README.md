@@ -19,7 +19,7 @@ rice-mode status
 | `waybar/.config/waybar/` | bar config + CSS (imports generated `colors.css`) |
 | `swaync/.config/swaync/` | notification daemon + CSS |
 | `rofi/.config/rofi/` | launcher (imports generated `colors.rasi`) |
-| `wlogout/.config/wlogout/` | HyDE-style attached 2×2 power menu (`rice-logout`, imports generated `colors.css`) |
+| `wlogout/.config/wlogout/` | Ten selectable power-menu layouts (`rice-logout`, imports generated `colors.css`) |
 | `kitty/.config/kitty/` | terminal (includes generated `colors.conf`) |
 | `btop/.config/btop/` | resource monitor (generated `themes/wallust.theme`) |
 | `cava/.config/cava/` | audio visualizer (generated `themes/wallust`) |
@@ -375,6 +375,8 @@ Mode state lives in `~/.cache/rice/`: `mode`, `effective-mode`, `location`,
 | `Super+Shift+C` | color picker |
 | `Super+L` | lock (hyprlock) |
 | `Super+Backspace` | power menu (wlogout) |
+| `Super+Shift+Backspace` | power-menu layout picker |
+| `Super+Ctrl+Backspace` | next power-menu layout |
 | `Super+Shift+F10` | night light |
 | `Super+Ctrl+L` | force light mode |
 | `Super+Ctrl+D` | force dark mode |
@@ -408,12 +410,42 @@ rice-screenshot ocr
 Hyprland uses a Material 3-inspired preset: spring-based window movement,
 crisp pop-in/out for windows, slide-fade workspace changes, slide-fade special
 workspaces, and fading layers. wlogout is matched on its real `logout_dialog`
-layer namespace, so its backdrop is blurred and the overlay fades in. Its four
-tiles use HyDE's attached 2×2 layout: only the outer corners are rounded, and
-hover/focus fills the tile with the palette selection colour while expanding it
-toward its corner with HyDE's springy `cubic-bezier`. `rice-logout` picks the
-monitor-sized margin block and a black or white icon set from the active
-palette, so the menu stays readable in both light and dark themes.
+layer namespace, so its backdrop is blurred and the overlay fades in. The
+default menu is HyDE's attached 2×2 layout: only the outer corners are rounded,
+and hover fills the tile with the palette selection colour while easing its
+corners and glyph outward. The old version animated GTK margins, which forced a
+grid relayout on every frame; the current version animates colour, radius, and
+background size only, so the motion stays smooth. Focus is a faint ring rather
+than a fill, which keeps the first tile neutral when the menu opens.
+`rice-logout` sizes the block from the focused monitor, confines wlogout to that
+monitor, and stages black or white icons against the active surface and
+selection colours.
+
+### Power menu layouts
+
+`Super+Shift+Backspace` opens a rofi picker and `Super+Ctrl+Backspace` cycles to
+the next layout. The choice is remembered in `~/.cache/rice/wlogout-layout`, so
+`Super+Backspace` reopens the last one.
+
+| Layout | Shape | Source |
+|---|---|---|
+| `attached` | 2×2 attached tiles, outer-corner rounding | HyDE style 2 |
+| `grid` | 3×2 tiles with soft gaps | HyDE style 1 |
+| `pills` | 3×2 translucent pills, wide rounding | JaKooLit |
+| `cards` | single row of floating cards | HyprNova |
+| `capsule` | 3×2 grid with capsule ends | BlackNode |
+| `glass` | 3×2 frosted tiles over a dimmed backdrop | ML4W Glass |
+| `modern` | 3×2 accent-edged cards | ML4W Modern |
+| `minimal` | icon-only row with a soft halo | Vieg |
+| `mosaic` | 2×2 quadrants with colour-edged rules | LierB |
+| `compact` | small 2×2 block with tight gaps | Hyprstellar |
+
+Each layout is a directory under `~/.config/wlogout/layouts/<name>/` containing
+`layout` (wlogout JSON), `style.css`, and `layout.conf` (grid geometry and
+picker metadata). Add a directory there to make a new layout appear in the
+picker; no launcher changes are needed. The CSS files are original adaptations
+of the referenced layouts and use the rice palette rather than hard-coded
+colours.
 
 ## Health / restart
 

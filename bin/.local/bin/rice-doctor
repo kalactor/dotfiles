@@ -131,9 +131,15 @@ done
 [ -L "$HOME/.config/systemd/user/rice-sun.service" ] && ok "~/.config/systemd/user/rice-sun.service" || bad "rice-sun.service is not a symlink"
 [ -L "$HOME/.config/systemd/user/rice-sun.timer" ] && ok "~/.config/systemd/user/rice-sun.timer" || bad "rice-sun.timer is not a symlink"
 [ -L "$HOME/.local/bin/rice-resume" ] && ok "~/.local/bin/rice-resume" || bad "~/.local/bin/rice-resume is not a symlink"
-for helper in rice-keybinds rice-calculator rice-emoji rice-screenshot; do
+for helper in rice-keybinds rice-calculator rice-emoji rice-screenshot rice-logout; do
     [ -L "$HOME/.local/bin/$helper" ] && ok "~/.local/bin/$helper" || bad "~/.local/bin/$helper is not a symlink"
 done
+if [ -d "$HOME/.config/wlogout/layouts" ] \
+    && [ "$(find "$HOME/.config/wlogout/layouts" -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 10 ]; then
+    ok "wlogout layouts (10)"
+else
+    bad "wlogout layouts missing or incomplete"
+fi
 [ -L "$HOME/.local/bin/rice-mode" ] && ok "~/.local/bin/rice-mode" || bad "~/.local/bin/rice-mode is not a symlink"
 [ -L "$HOME/.local/bin/rice-contrast" ] && ok "~/.local/bin/rice-contrast" || bad "~/.local/bin/rice-contrast is not a symlink"
 

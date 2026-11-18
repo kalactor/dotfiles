@@ -280,7 +280,7 @@ require("autostart")
 - [x] rofi installed; `Super+A` opens `rofi -show drun`
 - [x] App launcher imports generated `colors.rasi`; opens on the focused monitor (`monitor: "-1"`)
 - [x] Wallpaper picker with thumbnails (`wall pick`)
-- [x] Power menu: **wlogout** uses HyDE's attached 2×2 layout via `rice-logout`, bound to `Super+Backspace`; the planned rofi `power-menu` is not implemented
+- [x] Power menu: **wlogout** via `rice-logout`, bound to `Super+Backspace`; ten selectable layouts (`attached`, `grid`, `pills`, `cards`, `capsule`, `glass`, `modern`, `minimal`, `mosaic`, `compact`) with a rofi picker on `Super+Shift+Backspace` and cycle on `Super+Ctrl+Backspace`; the planned rofi `power-menu` is not implemented
 - [x] Clipboard picker (`Super+Shift+V` -> `rice-clipboard`)
 - [x] Calculator mode (`Super+Ctrl+C`, qalc) and emoji mode (`Super+Ctrl+E`)
 - [x] Live keybind cheat sheet in rofi (`Super+F1`, reads `hyprctl binds -j`)
@@ -497,6 +497,8 @@ systemctl --user is-failed hyprpolkitagent xdg-desktop-portal-hyprland 2>/dev/nu
 | `Super+F7` | Random wallpaper | binds |
 | `Super+F8` | Wallpaper picker | binds |
 | `Super+Backspace` | Power menu (`wlogout`) | binds |
+| `Super+Shift+Backspace` | Power-menu layout picker | binds |
+| `Super+Ctrl+Backspace` | Next power-menu layout | binds |
 | `Super+L` | Lock screen | binds |
 | `Super+N` | SwayNC panel | binds |
 | `Super+T` | kitty | binds |
@@ -514,9 +516,11 @@ systemctl --user is-failed hyprpolkitagent xdg-desktop-portal-hyprland 2>/dev/nu
 | `Super+Q`, `Super+R`, `Super+M` | **Emergency binds** Hyprland adds when the Lua config has a major error | built in |
 
 > Power is `Super+Backspace` (wlogout), lock is `Super+L`, and DND is
-> `Super+Shift+N`. `Super+F1` opens the live keybind sheet, `Super+Ctrl+C` the
-> calculator, and `Super+Ctrl+E` the emoji picker. See `binds.lua` for the
-> current source of truth; emergency binds only appear after a major Lua error.
+> `Super+Shift+N`. `Super+Shift+Backspace` picks a power-menu layout and
+> `Super+Ctrl+Backspace` cycles to the next one. `Super+F1` opens the live
+> keybind sheet, `Super+Ctrl+C` the calculator, and `Super+Ctrl+E` the emoji
+> picker. See `binds.lua` for the current source of truth; emergency binds only
+> appear after a major Lua error.
 
 ---
 

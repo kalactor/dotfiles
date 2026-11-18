@@ -1,0 +1,82 @@
+/*
+ * minimal — Vieg.
+ *
+ * An icon-only row: labels are hidden, glyphs are large, and hover adds a
+ * soft selection halo rather than a full fill.  Five actions read as one
+ * quiet strip across the lower third of the screen.
+ *
+ * Inspired by ViegPhunt/Dotfiles (GPL-3.0).
+ * Palette roles come from colors.css; icons are staged by rice-logout.
+ */
+
+@import "colors.css";
+
+* {
+    background-image: none;
+    box-shadow: none;
+    text-shadow: none;
+    outline-style: none;
+    font-family: "Inter", "Noto Sans", sans-serif;
+}
+
+window {
+    background-color: transparent;
+}
+
+button {
+    color: transparent;
+    background-color: transparent;
+    border: 2px solid transparent;
+    border-radius: 999px;
+    padding: 0;
+
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 36%;
+
+    transition:
+        background-color 180ms cubic-bezier(0.2, 0, 0, 1),
+        border-color 180ms cubic-bezier(0.2, 0, 0, 1),
+        background-size 220ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+button label {
+    color: transparent;
+    font-size: 0;
+}
+
+button:hover {
+    background-color: alpha(@selection_bg, 0.14);
+    border-color: alpha(@selection_bg, 0.55);
+    background-size: 46%;
+}
+
+button:focus {
+    border-color: alpha(@foreground, 0.12);
+    background-size: 38%;
+}
+
+button:active {
+    background-color: alpha(@selection_bg, 0.22);
+    background-size: 50%;
+}
+
+#lock {
+    background-image: image(url("icons/base/lock.png"), url("/usr/share/wlogout/icons/lock.png"));
+}
+
+#logout {
+    background-image: image(url("icons/base/logout.png"), url("/usr/share/wlogout/icons/logout.png"));
+}
+
+#suspend {
+    background-image: image(url("icons/base/suspend.png"), url("/usr/share/wlogout/icons/suspend.png"));
+}
+
+#shutdown {
+    background-image: image(url("icons/base/shutdown.png"), url("/usr/share/wlogout/icons/shutdown.png"));
+}
+
+#reboot {
+    background-image: image(url("icons/base/reboot.png"), url("/usr/share/wlogout/icons/reboot.png"));
+}

@@ -1,0 +1,116 @@
+/*
+ * modern — ML4W Modern.
+ *
+ * Six accent-edged cards.  The coloured left rule is the identity of the
+ * layout; hover keeps it visible while the card fills with the selection
+ * colour, so the grid stays legible in both light and dark palettes.
+ *
+ * Inspired by mylinuxforwork/dotfiles (GPL-3.0).
+ * Palette roles come from colors.css; icons are staged by rice-logout.
+ */
+
+@import "colors.css";
+
+* {
+    background-image: none;
+    box-shadow: none;
+    text-shadow: none;
+    outline-style: none;
+    font-family: "Inter", "Noto Sans", sans-serif;
+    font-size: 18px;
+}
+
+window {
+    background-color: transparent;
+}
+
+button {
+    color: @foreground;
+    background-color: @surface_alt;
+    border: 2px solid transparent;
+    border-left: 5px solid @accent;
+    border-radius: 14px;
+    padding: 0;
+
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 22%;
+
+    transition:
+        background-color 180ms cubic-bezier(0.2, 0, 0, 1),
+        border-color 180ms cubic-bezier(0.2, 0, 0, 1),
+        color 180ms cubic-bezier(0.2, 0, 0, 1),
+        border-radius 220ms cubic-bezier(0.2, 0, 0, 1),
+        background-size 220ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+button:hover {
+    color: @selection_fg;
+    background-color: @selection_bg;
+    border-color: transparent;
+    border-left-color: @selection_fg;
+    border-radius: 18px;
+    background-size: 30%;
+}
+
+button:focus {
+    border-color: alpha(@foreground, 0.16);
+    border-left-color: @accent;
+    background-size: 24%;
+}
+
+button:active {
+    background-size: 32%;
+}
+
+button label {
+    color: inherit;
+}
+
+#lock {
+    background-image: image(url("icons/base/lock.png"), url("/usr/share/wlogout/icons/lock.png"));
+}
+
+#shutdown {
+    background-image: image(url("icons/base/shutdown.png"), url("/usr/share/wlogout/icons/shutdown.png"));
+}
+
+#suspend {
+    background-image: image(url("icons/base/suspend.png"), url("/usr/share/wlogout/icons/suspend.png"));
+}
+
+#hibernate {
+    background-image: image(url("icons/base/hibernate.png"), url("/usr/share/wlogout/icons/hibernate.png"));
+}
+
+#logout {
+    background-image: image(url("icons/base/logout.png"), url("/usr/share/wlogout/icons/logout.png"));
+}
+
+#reboot {
+    background-image: image(url("icons/base/reboot.png"), url("/usr/share/wlogout/icons/reboot.png"));
+}
+
+button:hover#lock {
+    background-image: image(url("icons/active/lock.png"), url("/usr/share/wlogout/icons/lock.png"));
+}
+
+button:hover#shutdown {
+    background-image: image(url("icons/active/shutdown.png"), url("/usr/share/wlogout/icons/shutdown.png"));
+}
+
+button:hover#suspend {
+    background-image: image(url("icons/active/suspend.png"), url("/usr/share/wlogout/icons/suspend.png"));
+}
+
+button:hover#hibernate {
+    background-image: image(url("icons/active/hibernate.png"), url("/usr/share/wlogout/icons/hibernate.png"));
+}
+
+button:hover#logout {
+    background-image: image(url("icons/active/logout.png"), url("/usr/share/wlogout/icons/logout.png"));
+}
+
+button:hover#reboot {
+    background-image: image(url("icons/active/reboot.png"), url("/usr/share/wlogout/icons/reboot.png"));
+}

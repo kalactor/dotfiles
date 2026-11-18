@@ -1,29 +1,79 @@
 #!/usr/bin/env bash
-# rice-logout — HyDE-style attached wlogout menu.
+# rice-logout — themed wlogout power menu with selectable layouts.
 #
-# The 2×2 tile block is sized from the focused monitor.  Icons are staged in
-# both surface and selection colours so the glyphs stay readable when a tile
-# fills with the palette selection colour on hover/focus.
-# wlogout reads a staged copy in ~/.cache/rice/wlogout because the icon and
-# colour imports are relative to the stylesheet.
+# Layouts live in ~/.config/wlogout/layouts/<name>/ as a wlogout JSON layout,
+# a stylesheet, and a small layout.conf that records the grid geometry.  The
+# selected layout is remembered in ~/.cache/rice/wlogout-layout, so the main
+# bind reopens whatever was chosen last.
+#
+# The menu is sized from the focused monitor and confined to it with -n.
+# Icons are staged in the surface and selection colours so the glyphs stay
+# readable on both the resting tile and the hover fill.
 set -uo pipefail
 
-if pgrep -x wlogout >/dev/null 2>&1; then
-    pkill -x wlogout
-    exit 0
-fi
-
 conf="$HOME/.config/wlogout"
+layouts="$conf/layouts"
 stage="$HOME/.cache/rice/wlogout"
 icons="$stage/icons"
+state="$HOME/.cache/rice/wlogout-layout"
+default_layout="attached"
 
-[ -f "$conf/style.css" ] || { notify-send -u critical "wlogout" "Missing $conf/style.css"; exit 1; }
-[ -f "$conf/colors.css" ] || { notify-send -u critical "wlogout" "Missing $conf/colors.css; apply a theme first"; exit 1; }
-[ -f "$conf/layout" ] || { notify-send -u critical "wlogout" "Missing $conf/layout"; exit 1; }
+usage() {
+    cat <<'EOF'
+Usage: rice-logout [option]
 
-mkdir -p "$stage"
-cp -f "$conf/style.css" "$stage/style.css"
-cp -f "$conf/colors.css" "$stage/colors.css"
+  (no option)       Open the power menu with the saved layout
+  --layout NAME     Save NAME and open it
+  --pick            Choose a layout with rofi, then open it
+  --next            Cycle to the next layout and open it
+  --set NAME        Save NAME without opening the menu
+  --list            List available layouts
+  -h, --help        Show this help
+EOF
+}
+
+die() {
+    if command -v notify-send >/dev/null 2>&1; then
+        notify-send -u critical "wlogout" "$*"
+    fi
+    printf 'rice-logout: %s\n' "$*" >&2
+    exit 1
+}
+
+layout_names() {
+    local name order
+    while IFS= read -r name; do
+        order=$(conf_value "$layouts/$name/layout.conf" order)
+        printf '%s\t%s\n' "${order:-999}" "$name"
+    done < <(find "$layouts" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null) \
+        | sort -n -k1,1 -k2,2 \
+        | cut -f2
+}
+
+conf_value() { # file key
+    awk -F= -v key="$2" '
+        $1 == key {
+            sub(/^[^=]*=/, "")
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "")
+            print
+            exit
+        }' "$1" 2>/dev/null
+}
+
+current_layout() {
+    local name=""
+    [ -s "$state" ] && name=$(<"$state")
+    [ -n "$name" ] && [ -d "$layouts/$name" ] || name=$default_layout
+    printf '%s\n' "$name"
+}
+
+set_layout() {
+    local name=$1
+    [ -n "$name" ] || die "layout name is empty"
+    [ -d "$layouts/$name" ] || die "unknown layout: $name"
+    mkdir -p "$(dirname "$state")"
+    printf '%s\n' "$name" >"$state"
+}
 
 palette="$HOME/.cache/rice/colors.env"
 colour() {
@@ -49,38 +99,171 @@ icon_set() {
 }
 
 stage_icons() {
-    local dir="$1" background="$2" set
+    local dir=$1 background=$2 set source name candidate
     set=$(icon_set "$background")
     mkdir -p "$icons/$dir"
-    for name in lock logout shutdown reboot; do
-        local source_icon="$conf/icons/${name}_${set}.png"
-        [ -f "$source_icon" ] || source_icon="$conf/icons/${name}_white.png"
-        cp -f "$source_icon" "$icons/$dir/$name.png"
+    while IFS= read -r source; do
+        name=${source##*/}
+        name=${name%_black.png}
+        candidate="$conf/icons/${name}_${set}.png"
+        [ -f "$candidate" ] || candidate="$conf/icons/${name}_white.png"
+        [ -f "$candidate" ] || candidate="$conf/icons/${name}_black.png"
+        [ -f "$candidate" ] && cp -f "$candidate" "$icons/$dir/$name.png"
+    done < <(find "$conf/icons" -maxdepth 1 -name '*_black.png' -printf '%p\n' | sort)
+}
+
+open_layout() {
+    local name=$1 dir="$layouts/$1"
+    [ -d "$dir" ] || die "unknown layout: $name"
+    [ -f "$dir/style.css" ] || die "missing $dir/style.css"
+    [ -f "$dir/layout" ] || die "missing $dir/layout"
+    [ -f "$conf/colors.css" ] || die "missing $conf/colors.css; apply a theme first"
+
+    mkdir -p "$stage"
+    cp -f "$dir/style.css" "$stage/style.css"
+    cp -f "$conf/colors.css" "$stage/colors.css"
+    stage_icons base "$(colour surface)"
+    stage_icons active "$(colour selection_bg)"
+
+    local buttons col_gap row_gap inset_x inset_y
+    buttons=$(conf_value "$dir/layout.conf" buttons); buttons=${buttons:-2}
+    col_gap=$(conf_value "$dir/layout.conf" col_gap); col_gap=${col_gap:-0}
+    row_gap=$(conf_value "$dir/layout.conf" row_gap); row_gap=${row_gap:-0}
+    inset_x=$(conf_value "$dir/layout.conf" inset_x); inset_x=${inset_x:-35}
+    inset_y=$(conf_value "$dir/layout.conf" inset_y); inset_y=${inset_y:-25}
+
+    # HyDE-style insets: the launcher owns the block size so every layout can
+    # choose its own proportions without per-button CSS variables.
+    local monitor width height scale x_margin y_margin
+    monitor=$(hyprctl -j monitors 2>/dev/null \
+        | jq -r '.[] | select(.focused) | "\(.width) \(.height) \(.scale)"' \
+        | head -n1)
+    read -r width height scale <<<"${monitor:-1920 1080 1}"
+    width=${width:-1920}
+    height=${height:-1080}
+    scale=${scale:-1}
+
+    x_margin=$(awk -v size="$width" -v percent="$inset_x" -v scale="$scale" \
+        'BEGIN { printf "%d", (size * percent / 100) / scale }')
+    y_margin=$(awk -v size="$height" -v percent="$inset_y" -v scale="$scale" \
+        'BEGIN { printf "%d", (size * percent / 100) / scale }')
+
+    exec wlogout -b "$buttons" -c "$col_gap" -r "$row_gap" -n \
+        -L "$x_margin" -R "$x_margin" -T "$y_margin" -B "$y_margin" \
+        --layout "$dir/layout" \
+        --css "$stage/style.css" \
+        --protocol layer-shell
+}
+
+pick_layout() {
+    command -v rofi >/dev/null 2>&1 || die "rofi is required for --pick"
+    local names=() labels=() name title description choice index
+    mapfile -t names < <(layout_names)
+    [ "${#names[@]}" -gt 0 ] || die "no layouts in $layouts"
+    for name in "${names[@]}"; do
+        title=$(conf_value "$layouts/$name/layout.conf" title); title=${title:-$name}
+        description=$(conf_value "$layouts/$name/layout.conf" description)
+        labels+=("$title${description:+  ·  $description}")
     done
+    choice=$(printf '%s\n' "${labels[@]}" \
+        | rofi -dmenu -i -format i -p "Power menu" \
+            -mesg "Choose a wlogout layout" \
+            -theme-str 'window { width: 56%; } listview { lines: 10; }') \
+        || return 1
+    [ -n "$choice" ] || return 1
+    index=${choice%$'\n'}
+    [[ "$index" =~ ^[0-9]+$ ]] || die "invalid rofi selection"
+    [ "$index" -lt "${#names[@]}" ] || die "invalid rofi selection"
+    set_layout "${names[$index]}"
 }
 
-stage_icons base "$(colour surface)"
-stage_icons active "$(colour selection_bg)"
+action=open
+requested=""
+while [ $# -gt 0 ]; do
+    case $1 in
+        --layout)
+            [ $# -ge 2 ] || die "--layout needs a name"
+            requested=$2
+            action=open
+            shift 2
+            ;;
+        --set)
+            [ $# -ge 2 ] || die "--set needs a name"
+            requested=$2
+            action=set
+            shift 2
+            ;;
+        --pick)
+            action=pick
+            shift
+            ;;
+        --next)
+            action=next
+            shift
+            ;;
+        --list)
+            action=list
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            die "unknown option: $1"
+            ;;
+    esac
+done
 
-# HyDE style 2 insets the block by 35% horizontally and 25% vertically.  The
-# grid margins reproduce that block size without per-button CSS variables.
-monitor=$(hyprctl -j monitors 2>/dev/null \
-    | jq -r '.[] | select(.focused) | "\(.width) \(.height) \(.scale)"' \
-    | head -n1)
-read -r width height scale <<<"${monitor:-1920 1080 1}"
-width=${width:-1920}
-height=${height:-1080}
-scale=${scale:-1}
+# The main bind is a toggle.  Layout changes close an open menu first so the
+# picker and the next-layout cycle are not swallowed by wlogout's keyboard grab.
+if pgrep -x wlogout >/dev/null 2>&1; then
+    case $action in
+        open)
+            pkill -x wlogout
+            exit 0
+            ;;
+        pick|next)
+            pkill -x wlogout
+            sleep 0.15
+            ;;
+    esac
+fi
 
-inset() {
-    awk -v size="$1" -v percent="$2" -v scale="$3" \
-        'BEGIN { printf "%d", (size * percent / 100) / scale }'
-}
-x_margin=$(inset "$width" 35 "$scale")
-y_margin=$(inset "$height" 25 "$scale")
-
-exec wlogout -b 2 -c 0 -r 0 \
-    -L "$x_margin" -R "$x_margin" -T "$y_margin" -B "$y_margin" \
-    --layout "$conf/layout" \
-    --css "$stage/style.css" \
-    --protocol layer-shell
+case $action in
+    list)
+        active=$(current_layout)
+        while IFS= read -r name; do
+            title=$(conf_value "$layouts/$name/layout.conf" title); title=${title:-$name}
+            description=$(conf_value "$layouts/$name/layout.conf" description)
+            marker="  "
+            [ "$name" = "$active" ] && marker="● "
+            printf '%s%s\t%s\n' "$marker" "$title" "$description"
+        done < <(layout_names)
+        ;;
+    set)
+        set_layout "$requested"
+        ;;
+    pick)
+        pick_layout || exit 0
+        open_layout "$(current_layout)"
+        ;;
+    next)
+        mapfile -t names < <(layout_names)
+        [ "${#names[@]}" -gt 0 ] || die "no layouts in $layouts"
+        active=$(current_layout)
+        next_index=0
+        for i in "${!names[@]}"; do
+            if [ "${names[$i]}" = "$active" ]; then
+                next_index=$(( (i + 1) % ${#names[@]} ))
+                break
+            fi
+        done
+        set_layout "${names[$next_index]}"
+        open_layout "${names[$next_index]}"
+        ;;
+    open)
+        [ -n "$requested" ] && set_layout "$requested"
+        open_layout "$(current_layout)"
+        ;;
+esac

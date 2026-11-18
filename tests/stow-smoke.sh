@@ -71,14 +71,29 @@ grep -q 'SHIFT + X' "$target/.config/hypr/binds.lua"
 grep -q 'windowsMove' "$target/.config/hypr/look.lua"
 grep -q 'specialWorkspace' "$target/.config/hypr/look.lua"
 grep -q 'logout_dialog' "$target/.config/hypr/rules.lua"
-grep -q 'cubic-bezier(0.55, 0, 0.28, 1.682)' "$target/.config/wlogout/style.css"
-grep -q 'button:hover#lock' "$target/.config/wlogout/style.css"
+grep -q 'cubic-bezier(0.2, 0, 0, 1)' "$target/.config/wlogout/layouts/attached/style.css"
+grep -q 'button:hover#lock' "$target/.config/wlogout/layouts/attached/style.css"
+grep -q 'button:focus' "$target/.config/wlogout/layouts/attached/style.css"
 grep -q 'selection_bg' "$target/.config/wallust/templates/wlogout-colors.css"
 grep -q 'rice-logout' "$target/.config/hypr/binds.lua"
+grep -q 'SHIFT + Backspace' "$target/.config/hypr/binds.lua"
 [ -x "$target/.local/bin/rice-logout" ]
 [ "$(grep -c '"label"' "$target/.config/wlogout/layout")" -eq 4 ]
 [ -f "$target/.config/wlogout/icons/lock_white.png" ]
 [ -f "$target/.config/wlogout/icons/lock_black.png" ]
+[ -f "$target/.config/wlogout/icons/suspend_white.png" ]
+[ -f "$target/.config/wlogout/icons/hibernate_black.png" ]
+
+# Ten selectable layouts, each with its own geometry, JSON actions, and CSS.
+for layout in attached grid pills cards capsule glass modern minimal mosaic compact; do
+    [ -f "$target/.config/wlogout/layouts/$layout/style.css" ]
+    [ -f "$target/.config/wlogout/layouts/$layout/layout" ]
+    grep -q '^order=' "$target/.config/wlogout/layouts/$layout/layout.conf"
+    grep -q '^buttons=' "$target/.config/wlogout/layouts/$layout/layout.conf"
+    grep -q '@import "colors.css"' "$target/.config/wlogout/layouts/$layout/style.css"
+done
+[ "$(find "$target/.config/wlogout/layouts" -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 10 ]
+HOME="$target" "$target/.local/bin/rice-logout" --list | grep -c 'HyDE Attached' >/dev/null
 
 # hellwal is the default palette engine; an explicit RICE_THEME_ENGINE or the
 # recorded engine marker overrides it.  Matugen and wallust remain available.
