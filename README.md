@@ -199,6 +199,7 @@ theme-set mclaren
 theme-set redbull
 theme-set sumi
 theme-set dune
+theme-set blade-runner-2049
 theme-set sumi dark
 rice-theme --list
 ```
@@ -214,8 +215,12 @@ Return to wallpaper-derived colours with an explicit engine override:
 RICE_THEME_ENGINE=hellwal wall next
 ```
 
-Five themes ship by default:
+Six themes ship by default:
 
+- **Blade Runner 2049** uses amber `#A85115`/`#E08A2E`, teal `#24575A` and
+  concrete `#EDE6DA`. Light mode is amber haze with a near-black concrete bar
+  and a teal secondary; dark mode is teal rain with warm paper text and an
+  amber accent.
 - **Dune** uses sand `#EFE3D0`, copper `#A94A1B` and petrol `#2F5D5A`. Light
   mode keeps warm paper with a coffee bar and a copper selection; dark mode is
   desert night with sand text, copper accents and a petrol-teal secondary.
@@ -237,13 +242,14 @@ Five themes ship by default:
 
 All palettes pass the contrast policy, and the test suite globs every
 `theme.conf` directory so a new theme is checked automatically. The
-wallpapers live in `~/Pictures/walls/dune/{light,dark}`,
+wallpapers live in `~/Pictures/walls/blade-runner-2049/{light,dark}`,
+`~/Pictures/walls/dune/{light,dark}`,
 `~/Pictures/walls/gulf/{light,dark}`,
 `~/Pictures/walls/mclaren/{light,dark}`,
 `~/Pictures/walls/redbull/{light,dark}` and
-`~/Pictures/walls/sumi/{light,dark}`. The `01-`/`02-` prefixes in the Dune,
-Gulf and Sumi trees pin `theme-set` and `wall next` order to the intended hero
-first.
+`~/Pictures/walls/sumi/{light,dark}`. The `01-`/`02-` prefixes in the Blade
+Runner, Dune, Gulf and Sumi trees pin `theme-set` and `wall next` order to the
+intended hero first.
 
 ### Contrast and transparency
 
