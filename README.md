@@ -77,6 +77,14 @@ Waybar module uses separately installed personal `seed4`/`seed4-toggle`
 scripts; those are external and not required by the base rice. Telegram's
 one-time activation is documented below.
 
+The Waybar temp-mail module ships in `bin/.local/bin/tempmail-waybar`; its
+address and API token live in `~/.local/state/tempmail-waybar` (mode `0600`).
+Left click copies the address, middle click creates a new one, right click
+opens the inbox. It polls temp-mail.org every 30 s, so treat it as
+best-effort: when the service is unreachable the icon turns red and the
+tooltip carries the reason. Drop `custom/tempmail` from `modules-right` to
+disable it.
+
 `theme-apply` seeds Dolphin's global Details view on first run (stored in an
 xattr); it never overwrites a view mode you have already chosen.
 

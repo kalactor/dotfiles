@@ -112,6 +112,7 @@ button:hover {
 #custom-expand-icon,
 #custom-weather,
 #custom-mode,
+#custom-tempmail,
 #custom-notification,
 #custom-seed4,
 #custom-updates,
@@ -131,6 +132,19 @@ button:hover {
 
 #custom-mode.dark {
     color: @bar_accent_alt;
+}
+
+/* Temp Mail: quiet until mail arrives. */
+#custom-tempmail {
+    color: alpha(@fg, 0.6);
+}
+
+#custom-tempmail.has-mail {
+    color: @selection_bg;
+}
+
+#custom-tempmail.error {
+    color: @red;
 }
 
 /* SwayNC states: count and DND at a glance. */

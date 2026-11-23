@@ -24,6 +24,7 @@
 
   "modules-right": [
     "custom/mode",
+    "custom/tempmail",
     "custom/notification",
     "pulseaudio",
     "network",
@@ -83,6 +84,17 @@
     "tooltip": true,
     "on-click": "$HOME/.local/bin/rice-mode toggle",
     "on-click-right": "$HOME/.local/bin/rice-mode auto"
+  },
+
+  // Disposable inbox: left copies, middle replaces, right opens
+  "custom/tempmail": {
+    "exec": "$HOME/.local/bin/tempmail-waybar status",
+    "return-type": "json",
+    "interval": 30,
+    "signal": 8,
+    "on-click": "$HOME/.local/bin/tempmail-waybar copy",
+    "on-click-middle": "$HOME/.local/bin/tempmail-waybar change",
+    "on-click-right": "$HOME/.local/bin/tempmail-waybar open"
   },
 
   "custom/notification": {
