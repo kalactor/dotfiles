@@ -198,6 +198,7 @@ theme-set gulf
 theme-set mclaren
 theme-set redbull
 theme-set sumi
+theme-set dune
 theme-set sumi dark
 rice-theme --list
 ```
@@ -213,8 +214,11 @@ Return to wallpaper-derived colours with an explicit engine override:
 RICE_THEME_ENGINE=hellwal wall next
 ```
 
-Four themes ship by default:
+Five themes ship by default:
 
+- **Dune** uses sand `#EFE3D0`, copper `#A94A1B` and petrol `#2F5D5A`. Light
+  mode keeps warm paper with a coffee bar and a copper selection; dark mode is
+  desert night with sand text, copper accents and a petrol-teal secondary.
 - **Gulf 917** uses Le Mans powder blue `#6E9DB5`, Gulf orange `#E8752B` and
   warm paper `#F4F1EA`. Light mode has a petrol-ink bar with an orange
   selection and clock plus a powder-blue secondary; dark mode moves to a
@@ -233,11 +237,13 @@ Four themes ship by default:
 
 All palettes pass the contrast policy, and the test suite globs every
 `theme.conf` directory so a new theme is checked automatically. The
-wallpapers live in `~/Pictures/walls/gulf/{light,dark}`,
+wallpapers live in `~/Pictures/walls/dune/{light,dark}`,
+`~/Pictures/walls/gulf/{light,dark}`,
 `~/Pictures/walls/mclaren/{light,dark}`,
 `~/Pictures/walls/redbull/{light,dark}` and
-`~/Pictures/walls/sumi/{light,dark}`. The `01-`/`02-` prefixes in the Gulf and
-Sumi trees pin `theme-set` and `wall next` order to the intended hero first.
+`~/Pictures/walls/sumi/{light,dark}`. The `01-`/`02-` prefixes in the Dune,
+Gulf and Sumi trees pin `theme-set` and `wall next` order to the intended hero
+first.
 
 ### Contrast and transparency
 
