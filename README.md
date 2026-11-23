@@ -200,6 +200,7 @@ theme-set redbull
 theme-set sumi
 theme-set dune
 theme-set blade-runner-2049
+theme-set aston-martin
 theme-set sumi dark
 rice-theme --list
 ```
@@ -215,8 +216,13 @@ Return to wallpaper-derived colours with an explicit engine override:
 RICE_THEME_ENGINE=hellwal wall next
 ```
 
-Six themes ship by default:
+Seven themes ship by default:
 
+- **Aston Martini** uses British racing green `#1F5C43`/`#10231B`, ivory
+  `#F3F1E6` and lime `#A3BE12`/`#C6E82E`. Light mode is ivory with a BRG bar
+  and a lime selection; dark mode is emerald night with lime accents, mint
+  highlights and a lime selection. Text roles use darkened olive, since lime
+  is a fill colour only.
 - **Blade Runner 2049** uses amber `#A85115`/`#E08A2E`, teal `#24575A` and
   concrete `#EDE6DA`. Light mode is amber haze with a near-black concrete bar
   and a teal secondary; dark mode is teal rain with warm paper text and an
@@ -242,14 +248,15 @@ Six themes ship by default:
 
 All palettes pass the contrast policy, and the test suite globs every
 `theme.conf` directory so a new theme is checked automatically. The
-wallpapers live in `~/Pictures/walls/blade-runner-2049/{light,dark}`,
+wallpapers live in `~/Pictures/walls/aston-martin/{light,dark}`,
+`~/Pictures/walls/blade-runner-2049/{light,dark}`,
 `~/Pictures/walls/dune/{light,dark}`,
 `~/Pictures/walls/gulf/{light,dark}`,
 `~/Pictures/walls/mclaren/{light,dark}`,
 `~/Pictures/walls/redbull/{light,dark}` and
-`~/Pictures/walls/sumi/{light,dark}`. The `01-`/`02-` prefixes in the Blade
-Runner, Dune, Gulf and Sumi trees pin `theme-set` and `wall next` order to the
-intended hero first.
+`~/Pictures/walls/sumi/{light,dark}`. The `01-`/`02-` prefixes in the Aston,
+Blade Runner, Dune, Gulf and Sumi trees pin `theme-set` and `wall next` order
+to the intended hero first.
 
 ### Contrast and transparency
 
