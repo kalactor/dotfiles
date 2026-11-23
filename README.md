@@ -203,6 +203,7 @@ theme-set blade-runner-2049
 theme-set aston-martin
 theme-set brawn-gp
 theme-set bauhaus
+theme-set blue-note
 theme-set sumi dark
 rice-theme --list
 ```
@@ -218,7 +219,7 @@ Return to wallpaper-derived colours with an explicit engine override:
 RICE_THEME_ENGINE=hellwal wall next
 ```
 
-Nine themes ship by default:
+Ten themes ship by default:
 
 - **Aston Martini** uses British racing green `#1F5C43`/`#10231B`, ivory
   `#F3F1E6` and lime `#A3BE12`/`#C6E82E`. Light mode is ivory with a BRG bar
@@ -235,6 +236,10 @@ Nine themes ship by default:
   concrete `#EDE6DA`. Light mode is amber haze with a near-black concrete bar
   and a teal secondary; dark mode is teal rain with warm paper text and an
   amber accent.
+- **Blue Note** uses midnight `#0E1B2A`/`#0B1420`, cream `#EFE6D2`, burnt
+  orange `#D2601A` and muted teal `#2F6F6A`. Light mode is cream paper with a
+  midnight bar, burnt-orange accents and a teal secondary; dark mode is navy
+  night with cream type, orange accents and a teal highlight.
 - **Brawn GP** uses white `#F7F7F2`, black `#111111` and radioactive
   chartreuse `#C6F000`/`#536400`. Light mode is white paper with a black bar,
   a chartreuse clock and a chartreuse selection; dark mode is black carbon with
@@ -264,14 +269,15 @@ All palettes pass the contrast policy, and the test suite globs every
 wallpapers live in `~/Pictures/walls/aston-martin/{light,dark}`,
 `~/Pictures/walls/bauhaus/{light,dark}`,
 `~/Pictures/walls/blade-runner-2049/{light,dark}`,
+`~/Pictures/walls/blue-note/{light,dark}`,
 `~/Pictures/walls/brawn-gp/{light,dark}`,
 `~/Pictures/walls/dune/{light,dark}`,
 `~/Pictures/walls/gulf/{light,dark}`,
 `~/Pictures/walls/mclaren/{light,dark}`,
 `~/Pictures/walls/redbull/{light,dark}` and
 `~/Pictures/walls/sumi/{light,dark}`. The `01-`/`02-` prefixes in the Aston,
-Bauhaus, Blade Runner, Brawn, Dune, Gulf and Sumi trees pin `theme-set` and
-`wall next` order to the intended hero first.
+Bauhaus, Blade Runner, Blue Note, Brawn, Dune, Gulf and Sumi trees pin
+`theme-set` and `wall next` order to the intended hero first.
 
 ### Contrast and transparency
 
