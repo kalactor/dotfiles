@@ -197,7 +197,8 @@ Press **`Super+Shift+T`** for the rofi theme picker, or apply a theme directly:
 theme-set gulf
 theme-set mclaren
 theme-set redbull
-theme-set gulf dark
+theme-set sumi
+theme-set sumi dark
 rice-theme --list
 ```
 
@@ -212,7 +213,7 @@ Return to wallpaper-derived colours with an explicit engine override:
 RICE_THEME_ENGINE=hellwal wall next
 ```
 
-Three themes ship by default:
+Four themes ship by default:
 
 - **Gulf 917** uses Le Mans powder blue `#6E9DB5`, Gulf orange `#E8752B` and
   warm paper `#F4F1EA`. Light mode has a petrol-ink bar with an orange
@@ -225,13 +226,18 @@ Three themes ship by default:
   yellow `#FFCC00`. Light mode has a navy bar with a yellow selection and
   clock plus a livery-blue secondary; dark mode has a navy-carbon bar with a
   red selection and clock and yellow secondary accents.
+- **Sumi** uses washi `#F4EFE5`, sumi ink `#1A1A1A`, vermilion `#C63A2B` and
+  indigo `#2B4C6F`. Light mode is warm paper with an ink bar and vermilion
+  selection; dark mode is indigo night with warm text and the same vermilion
+  accent.
 
 All palettes pass the contrast policy, and the test suite globs every
 `theme.conf` directory so a new theme is checked automatically. The
 wallpapers live in `~/Pictures/walls/gulf/{light,dark}`,
-`~/Pictures/walls/mclaren/{light,dark}` and
-`~/Pictures/walls/redbull/{light,dark}`. The `01-`/`02-` prefixes in the Gulf
-tree pin `theme-set` and `wall next` order to the intended hero first.
+`~/Pictures/walls/mclaren/{light,dark}`,
+`~/Pictures/walls/redbull/{light,dark}` and
+`~/Pictures/walls/sumi/{light,dark}`. The `01-`/`02-` prefixes in the Gulf and
+Sumi trees pin `theme-set` and `wall next` order to the intended hero first.
 
 ### Contrast and transparency
 

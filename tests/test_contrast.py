@@ -178,7 +178,7 @@ class PaletteTests(unittest.TestCase):
         themes = sorted(
             path.name for path in themes_root.iterdir() if (path / "theme.conf").is_file()
         )
-        self.assertIn("gulf", themes)
+        self.assertTrue({"gulf", "sumi"} <= set(themes))
         for theme in themes:
             for mode in ("light", "dark"):
                 palette = self.rc.read_palette(themes_root / theme / f"{mode}.env")
