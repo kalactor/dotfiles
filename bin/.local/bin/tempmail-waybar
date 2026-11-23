@@ -1,0 +1,576 @@
+#!/usr/bin/env python3
+"""
+tempmail-waybar - Waybar module for temp-mail.org
+
+Left click  : copy the current address
+Middle click: throw the address away and get a new one
+Right click : open the inbox in the browser
+
+New mail raises a desktop notification (click it to open the inbox).
+"""
+
+from __future__ import annotations
+
+import fcntl
+import hashlib
+import html
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+API = "https://web2.temp-mail.org"
+SITE = "https://temp-mail.org/en/"
+MAX_SEEN = 500
+HTTP_TIMEOUT = 15
+USER_AGENT = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+)
+HEADERS = {
+    "User-Agent": USER_AGENT,
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-GB,en;q=0.9",
+    "Origin": "https://temp-mail.org",
+    "Referer": "https://temp-mail.org/",
+    "sec-ch-ua": '"Chromium";v="140", "Not=A?Brand";v="24"',
+    "sec-ch-ua-platform": '"Linux"',
+}
+
+STATE_HOME = Path(
+    os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state")
+) / "tempmail-waybar"
+STATE_FILE = STATE_HOME / "state.json"
+LOCK_FILE = STATE_HOME / "lock"
+RETRY_FILE = STATE_HOME / "retry-until"
+
+
+# ---------------------------------------------------------------- state
+
+
+def ensure_dirs() -> None:
+    STATE_HOME.mkdir(parents=True, exist_ok=True, mode=0o700)
+
+
+def load_state() -> dict:
+    try:
+        with STATE_FILE.open("r", encoding="utf-8") as fh:
+            data = json.load(fh)
+            if isinstance(data, dict) and data.get("token") and data.get("email"):
+                return data
+    except (OSError, ValueError):
+        pass
+    return {}
+
+
+def save_state(state: dict) -> None:
+    ensure_dirs()
+    tmp = STATE_FILE.with_suffix(".tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(state, fh)
+    finally:
+        os.replace(tmp, STATE_FILE)
+
+
+class Lock:
+    def __init__(self, timeout: float = 6.0) -> None:
+        self.timeout = timeout
+        self.fh = None
+
+    def __enter__(self) -> "Lock":
+        ensure_dirs()
+        self.fh = LOCK_FILE.open("a+")
+        deadline = time.monotonic() + self.timeout
+        while True:
+            try:
+                fcntl.flock(self.fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                return self
+            except BlockingIOError:
+                if time.monotonic() >= deadline:
+                    return self  # proceed unlocked rather than block waybar
+                time.sleep(0.05)
+
+    def __exit__(self, *exc: object) -> None:
+        if self.fh is not None:
+            try:
+                fcntl.flock(self.fh, fcntl.LOCK_UN)
+            finally:
+                self.fh.close()
+
+
+# ----------------------------------------------------------------- api
+
+
+class ApiError(Exception):
+    def __init__(self, status: int | None, message: str = "") -> None:
+        super().__init__(message)
+        self.status = status
+
+
+def api(method: str, path: str, token: str | None = None, body: dict | None = None) -> dict:
+    headers = dict(HEADERS)
+    if body is not None:
+        headers["Content-Type"] = "application/json"
+    if token:
+        headers["Authorization"] = "Bearer " + token
+    data = json.dumps(body) if body is not None else None
+
+    if shutil.which("curl"):
+        # curl negotiates HTTP/2; Python's HTTP/1.1 client gets rate-limited.
+        cmd = ["curl", "-sS", "--http2", "--max-time", str(HTTP_TIMEOUT), "-X", method,
+               "-w", "\n%{http_code}"]
+        for key, value in headers.items():
+            cmd += ["-H", f"{key}: {value}"]
+        if data is not None:
+            cmd += ["--data-binary", data]
+        cmd.append(API + path)
+        try:
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=HTTP_TIMEOUT + 5)
+        except (OSError, subprocess.SubprocessError) as err:
+            raise ApiError(None, str(err)) from None
+        out = proc.stdout
+        payload, _, status = out.rpartition("\n")
+        try:
+            code = int(status.strip())
+        except ValueError:
+            raise ApiError(None, proc.stderr.strip() or "curl failed") from None
+        # curl prints http_code 000 when it never reached the origin (DNS,
+        # refused connection, timeout), and still exits non-zero.  Without
+        # this check a network outage looks exactly like an empty inbox.
+        if proc.returncode != 0 or not 100 <= code <= 599:
+            raise ApiError(None, proc.stderr.strip() or f"curl failed (exit {proc.returncode})")
+        if code >= 400:
+            raise ApiError(code, payload[:300])
+        raw = payload
+    else:
+        req = urllib.request.Request(API + path, data=data.encode() if data else None,
+                                     headers=headers, method=method)
+        try:
+            with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as resp:
+                raw = resp.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as err:
+            snippet = ""
+            try:
+                snippet = err.read(300).decode("utf-8", "replace")
+            except OSError:
+                pass
+            raise ApiError(err.code, snippet) from None
+        except (urllib.error.URLError, TimeoutError, OSError) as err:
+            raise ApiError(None, str(err)) from None
+
+    if not raw.strip():
+        return {}
+    try:
+        parsed = json.loads(raw)
+    except ValueError:
+        raise ApiError(None, "unexpected non-JSON response (Cloudflare?)") from None
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def create_mailbox() -> dict:
+    secret = hashlib.sha256(os.urandom(32)).hexdigest()
+    try:
+        reply = api("POST", "/mailbox", body={"mailbox": {"secret": secret, "domain": "temp-mail.org"}})
+    except ApiError as err:
+        if err.status == 429:
+            try:
+                RETRY_FILE.write_text(str(int(time.time()) + 45), encoding="utf-8")
+            except OSError:
+                pass
+        raise
+    if not reply.get("token") or not reply.get("mailbox"):
+        raise ApiError(None, "mailbox creation returned no address")
+    try:
+        RETRY_FILE.unlink()
+    except FileNotFoundError:
+        pass
+    return {"token": reply["token"], "email": reply["mailbox"], "seen": [], "created": int(time.time())}
+
+
+def retry_wait() -> int:
+    try:
+        return max(0, int(RETRY_FILE.read_text(encoding="utf-8")) - int(time.time()))
+    except (OSError, ValueError):
+        return 0
+
+
+def ensure_state() -> dict:
+    state = load_state()
+    if state:
+        return state
+    wait = retry_wait()
+    if wait:
+        raise ApiError(429, f"rate limited, retry in {wait}s")
+    state = create_mailbox()
+    save_state(state)
+    return state
+
+
+# ---------------------------------------------------------------- notify
+
+
+def notify(title: str, body: str, urgency: str = "normal", otp: str | None = None) -> None:
+    if not shutil.which("notify-send"):
+        return
+    # Detached helper waits for a click; status itself must return fast.
+    subprocess.Popen(
+        [sys.executable, str(Path(__file__).resolve()), "_notify", title, body, urgency, otp or ""],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
+    )
+
+
+def notify_wait(title: str, body: str, urgency: str, otp: str = "") -> None:
+    if not shutil.which("notify-send"):
+        return
+    # "default" is what the daemon runs when the notification body is clicked.
+    actions = ["default=Open inbox", "copy=Copy address"]
+    if otp:
+        actions.insert(0, "otp=Copy OTP")
+    cmd = [
+        "notify-send", "-a", "Temp Mail", "-u", urgency, "-i", "mail-unread",
+        "-t", "45000" if otp else "15000",
+        "-h", "string:x-canonical-private-synchronous:tempmail",
+    ]
+    for action in actions:
+        cmd += ["-A", action]
+    cmd += [title, body]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    except (OSError, subprocess.TimeoutExpired):
+        return
+    action = proc.stdout.strip()
+    if action in {"inbox", "default"}:
+        cmd_open()
+    elif action == "copy":
+        cmd_copy(quiet=True)
+    elif action == "otp" and otp:
+        if clip(otp):
+            notify("OTP copied", otp, urgency="low")
+
+
+def clip(text: str) -> bool:
+    for tool, args in (
+        ("wl-copy", []),
+        ("xclip", ["-selection", "clipboard"]),
+        ("xsel", ["-b", "-i"]),
+    ):
+        if not shutil.which(tool):
+            continue
+        try:
+            subprocess.run([tool, *args], input=text, text=True, timeout=5, check=True)
+            return True
+        except (OSError, subprocess.SubprocessError):
+            continue
+    return False
+
+
+def signal_waybar() -> None:
+    if shutil.which("pkill"):
+        subprocess.run(["pkill", "-RTMIN+8", "-x", "waybar"], check=False)
+
+
+# --------------------------------------------------------------- helpers
+
+
+def clean(value: str, limit: int = 140) -> str:
+    text = " ".join(str(value or "").split())
+    return text[:limit]
+
+
+def short_sender(raw: str) -> str:
+    sender = clean(raw, 100)
+    if "<" in sender:
+        name = sender.split("<", 1)[0].strip().strip("\"' ")
+        if name:
+            return name[:80]
+        return sender.split("<", 1)[1].rstrip("> ").strip()[:80]
+    return sender or "Unknown sender"
+
+
+_CODE_LABEL = (
+    r"(?:otp|passcode|pin|password|"
+    r"one[\s-]?time(?:\s+(?:code|pin|password))?|"
+    r"(?:verification|security|login|access|confirmation|auth(?:entication)?)\s+code|"
+    r"\bcode\b)"
+)
+_LABELED_CODE = re.compile(
+    _CODE_LABEL
+    + r"(?:[^A-Za-z0-9]{0,8}[A-Za-z]{1,12}(?=[^A-Za-z0-9])){0,3}[^A-Za-z0-9]{0,8}"
+    r"(?=[A-Za-z0-9]*\d)([A-Za-z0-9]{4,8})\b",
+    re.IGNORECASE,
+)
+_SIX_DIGITS = re.compile(r"(?<!\d)(\d{6,8})(?!\d)")
+_FOUR_DIGITS = re.compile(r"(?<!\d)(\d{4,8})(?!\d)")
+_CODE_WORD = re.compile(
+    r"\b(?:otp|passcode|pin|password|code|verification|verify)\b", re.IGNORECASE
+)
+
+
+def strip_html(text: str) -> str:
+    return html.unescape(re.sub(r"<[^>]+>", " ", text or ""))
+
+
+def extract_otp(*sources: str) -> str | None:
+    """Pull a verification code out of subject/preview/HTML text."""
+    cleaned: list[str] = []
+    for source in sources:
+        text = strip_html(source)
+        # join grouped codes such as "123 456" / "12 34 56" / "1234-5678"
+        text = re.sub(r"(?<!\d)(\d{2})[ -](\d{2})[ -](\d{2})(?!\d)", r"\1\2\3", text)
+        text = re.sub(r"(?<!\d)(\d{3})[ -](\d{3})(?!\d)", r"\1\2", text)
+        text = re.sub(r"(?<!\d)(\d{4})[ -](\d{4})(?!\d)", r"\1\2", text)
+        cleaned.append(" ".join(text.split()))
+
+    for text in cleaned:
+        match = _LABELED_CODE.search(text)
+        if match:
+            return match.group(1)[:8]
+    for text in cleaned:
+        match = _SIX_DIGITS.search(text)
+        if match:
+            return match.group(1)
+    if any(_CODE_WORD.search(text) for text in cleaned):
+        for text in cleaned:
+            match = _FOUR_DIGITS.search(text)
+            if match:
+                return match.group(1)
+    return None
+
+
+def emit(payload: dict) -> None:
+    print(json.dumps(payload, ensure_ascii=False), flush=True)
+
+
+def parse_iso(ts: object) -> str:
+    try:
+        return time.strftime("%H:%M", time.localtime(int(ts)))  # type: ignore[arg-type]
+    except (TypeError, ValueError, OverflowError):
+        return ""
+
+
+def tooltip(state: dict, messages: list[dict], note: str | None = None) -> str:
+    email = html.escape(state.get("email", ""), quote=False)
+    if email:
+        lines = [f"<b>{email}</b>", ""]
+    else:
+        lines = ["<b>No address yet</b>", ""]
+    if note:
+        lines += [html.escape(note, quote=False), ""]
+    if messages:
+        lines.append("<b>Latest mail</b>")
+        for msg in messages[:4]:
+            who = html.escape(short_sender(msg.get("from", "")), quote=False)
+            subject = html.escape(clean(msg.get("subject", "") or "(no subject)", 90), quote=False)
+            stamp = parse_iso(msg.get("receivedAt"))
+            prefix = f"<span alpha='60%'>{stamp}</span> " if stamp else ""
+            lines.append(f"{prefix}{who}")
+            lines.append(f"  <i>{subject}</i>")
+    else:
+        if email:
+            lines.append("<i>Inbox empty — waiting for mail</i>")
+    while lines and lines[-1] == "":
+        lines.pop()
+    lines += ["", "Left: copy   Middle: new address", "Right: open inbox"]
+    return "\n".join(lines)
+
+
+# --------------------------------------------------------------- commands
+
+
+def cmd_status() -> int:
+    # A single JSON line per run: Waybar unions the classes of every line it
+    # parses, so an early "loading" line would stick to the final state.
+    try:
+        with Lock():
+            state = ensure_state()
+            try:
+                listing = api("GET", "/messages", token=state["token"])
+            except ApiError as err:
+                if err.status != 401:
+                    raise
+                # token expired / mailbox removed: replace it
+                old = state["email"]
+                state = create_mailbox()
+                save_state(state)
+                notify("Address expired — replaced", f"{old}\n→ {state['email']}")
+                listing = api("GET", "/messages", token=state["token"])
+
+            messages = listing.get("messages") or []
+            seen = set(state.get("seen") or [])
+            fresh = [m for m in messages if m.get("_id") and m["_id"] not in seen]
+            if fresh:
+                merged = list(dict.fromkeys((state.get("seen") or []) + [m["_id"] for m in fresh]))
+                state["seen"] = merged[-MAX_SEEN:]
+                save_state(state)
+                count = len(fresh)
+                otp = None
+                otp_msg = None
+                for msg in fresh[:5]:
+                    subject = clean(msg.get("subject", ""), 200)
+                    preview = str(msg.get("bodyPreview") or "")
+                    rich = ""
+                    try:
+                        detail = api("GET", f"/messages/{msg['_id']}", token=state["token"])
+                        subject = clean(detail.get("subject") or subject, 200)
+                        preview = str(detail.get("bodyPreview") or preview)
+                        rich = str(detail.get("bodyHtml") or "")
+                    except ApiError:
+                        pass
+                    found = extract_otp(subject, preview, rich)
+                    if found:
+                        otp, otp_msg = found, msg
+                        break
+
+                chosen = otp_msg or fresh[0]
+                title = "New email" if count == 1 else f"{count} new emails"
+                if otp:
+                    title = f"New email · OTP {otp}"
+                body = short_sender(chosen.get("from", ""))
+                subject = clean(chosen.get("subject", "") or "(no subject)", 160)
+                if subject:
+                    body += "\n" + subject
+                if otp:
+                    body += f"\nOTP: {otp}"
+                if count > 1:
+                    body += f"\n+{count - 1} more"
+                notify(title, body, otp=otp)
+
+            emit({
+                "text": "󰇮",
+                "tooltip": tooltip(state, messages),
+                "class": "has-mail" if messages else "empty",
+                "alt": state["email"],
+            })
+    except ApiError as err:
+        if err.status == 429 and retry_wait() == 0:
+            try:
+                RETRY_FILE.write_text(str(int(time.time()) + 45), encoding="utf-8")
+            except OSError:
+                pass
+        known = load_state()
+        wait = retry_wait()
+        reason = (
+            f"rate limited by temp-mail.org ({wait}s)" if err.status == 429
+            else f"API error {err.status}" if err.status
+            else "network unavailable"
+        )
+        # Exit 0 on purpose: Waybar hides a custom module when its command
+        # fails, which would also hide this tooltip.
+        emit({
+            "text": "󰇮!",
+            "tooltip": tooltip(known, [], f"⚠ {reason}. Retrying…"),
+            "class": "error",
+            "alt": known.get("email", ""),
+        })
+        return 0
+    return 0
+
+
+def cmd_copy(quiet: bool = False) -> int:
+    try:
+        with Lock():
+            state = ensure_state()
+    except ApiError as err:
+        notify("No address yet", clean(str(err)) or "Try again shortly.", urgency="critical")
+        return 1
+    if clip(state["email"]):
+        if not quiet:
+            notify("Address copied", state["email"], urgency="low")
+    else:
+        notify("Copy failed", "Install wl-clipboard, xclip or xsel.", urgency="critical")
+        return 1
+    return 0
+
+
+def cmd_open() -> int:
+    # Open from the cached address without a network round-trip; a stale token
+    # is already replaced by the next status poll.
+    state = load_state()
+    if not state:
+        try:
+            with Lock():
+                state = ensure_state()
+        except ApiError:
+            state = {}
+    url = f"{SITE}?token={state['token']}" if state else SITE
+    opener = shutil.which("xdg-open") or shutil.which("hyprctl")
+    if not opener:
+        clip(url)
+        notify("Open this inbox", url)
+        return 0
+    try:
+        if opener.endswith("hyprctl"):
+            subprocess.Popen(["hyprctl", "dispatch", "exec", "xdg-open", url])
+        else:
+            subprocess.Popen([opener, url], start_new_session=True,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError as err:
+        notify("Could not open browser", str(err), urgency="critical")
+        return 1
+    return 0
+
+
+def cmd_change() -> int:
+    with Lock():
+        try:
+            state = create_mailbox()
+        except ApiError as err:
+            if err.status == 429:
+                notify("Slow down", "temp-mail.org is rate limiting new addresses.", urgency="critical")
+            else:
+                notify("Could not change address", clean(str(err)), urgency="critical")
+            return 1
+        save_state(state)
+    signal_waybar()
+    notify("New temporary address", state["email"], urgency="low")
+    return 0
+
+
+def cmd_refresh() -> int:
+    signal_waybar()
+    return 0
+
+
+def cmd_reset() -> int:
+    with Lock():
+        try:
+            STATE_FILE.unlink()
+        except FileNotFoundError:
+            pass
+    signal_waybar()
+    notify("Temp Mail reset", "A new address will be created.")
+    return 0
+
+
+def main(argv: list[str]) -> int:
+    command = argv[1] if len(argv) > 1 else "status"
+    if command == "status":
+        return cmd_status()
+    if command == "copy":
+        return cmd_copy()
+    if command == "open":
+        return cmd_open()
+    if command == "change":
+        return cmd_change()
+    if command == "refresh":
+        return cmd_refresh()
+    if command == "reset":
+        return cmd_reset()
+    if command == "_notify" and len(argv) >= 5:
+        otp = argv[5] if len(argv) > 5 else ""
+        notify_wait(argv[2], argv[3], argv[4], otp)
+        return 0
+    print(__doc__.strip())
+    return 0 if command in {"help", "--help", "-h"} else 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

@@ -16,7 +16,7 @@ for c in hyprctl waybar swaync swaync-client rofi wlogout hyprpaper \
          qt6ct kvantummanager btop cava rice-gtk-reload rice-mode wall theme-apply \
          rice-resume rice-keybinds rice-calculator rice-emoji rice-screenshot \
          tesseract qalc rice-contrast kde-theme dolphin-view-defaults telegram-theme \
-         theme-set rice-theme rice-logout; do
+         theme-set rice-theme rice-logout tempmail-waybar curl python3; do
     command -v "$c" >/dev/null 2>&1 && ok "$c" || bad "$c missing"
 done
 command -v hellwal >/dev/null 2>&1 && ok "hellwal (default engine)" \
@@ -131,7 +131,7 @@ done
 [ -L "$HOME/.config/systemd/user/rice-sun.service" ] && ok "~/.config/systemd/user/rice-sun.service" || bad "rice-sun.service is not a symlink"
 [ -L "$HOME/.config/systemd/user/rice-sun.timer" ] && ok "~/.config/systemd/user/rice-sun.timer" || bad "rice-sun.timer is not a symlink"
 [ -L "$HOME/.local/bin/rice-resume" ] && ok "~/.local/bin/rice-resume" || bad "~/.local/bin/rice-resume is not a symlink"
-for helper in rice-keybinds rice-calculator rice-emoji rice-screenshot rice-logout; do
+for helper in rice-keybinds rice-calculator rice-emoji rice-screenshot rice-logout tempmail-waybar; do
     [ -L "$HOME/.local/bin/$helper" ] && ok "~/.local/bin/$helper" || bad "~/.local/bin/$helper is not a symlink"
 done
 if [ -d "$HOME/.config/wlogout/layouts" ] \
