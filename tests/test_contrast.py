@@ -175,7 +175,11 @@ class PaletteTests(unittest.TestCase):
 
     def test_static_theme_palettes_pass_contrast(self):
         themes_root = ROOT / "rice" / ".config" / "rice" / "themes"
-        for theme in ("mclaren", "redbull"):
+        themes = sorted(
+            path.name for path in themes_root.iterdir() if (path / "theme.conf").is_file()
+        )
+        self.assertIn("gulf", themes)
+        for theme in themes:
             for mode in ("light", "dark"):
                 palette = self.rc.read_palette(themes_root / theme / f"{mode}.env")
                 self.assertTrue(set(self.rc.STATIC_REQUIRED_KEYS) <= set(palette))

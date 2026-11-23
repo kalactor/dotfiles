@@ -194,9 +194,10 @@ when the bar is a saturated brand colour.
 Press **`Super+Shift+T`** for the rofi theme picker, or apply a theme directly:
 
 ```bash
+theme-set gulf
 theme-set mclaren
 theme-set redbull
-theme-set mclaren dark
+theme-set gulf dark
 rice-theme --list
 ```
 
@@ -211,8 +212,12 @@ Return to wallpaper-derived colours with an explicit engine override:
 RICE_THEME_ENGINE=hellwal wall next
 ```
 
-Two themes ship by default:
+Three themes ship by default:
 
+- **Gulf 917** uses Le Mans powder blue `#6E9DB5`, Gulf orange `#E8752B` and
+  warm paper `#F4F1EA`. Light mode has a petrol-ink bar with an orange
+  selection and clock plus a powder-blue secondary; dark mode moves to a
+  night-stint petrol bar with orange selection and powder-blue accents.
 - **McLaren F1** uses papaya `#FF8000` with carbon `#17171A` and anthracite
   surfaces. Light mode keeps the papaya bar with a carbon selection and clock;
   dark mode flips to a carbon bar with papaya selection and chrome highlights.
@@ -221,9 +226,12 @@ Two themes ship by default:
   clock plus a livery-blue secondary; dark mode has a navy-carbon bar with a
   red selection and clock and yellow secondary accents.
 
-Both palettes pass the contrast policy. The wallpapers live in
+All palettes pass the contrast policy, and the test suite globs every
+`theme.conf` directory so a new theme is checked automatically. The
+wallpapers live in `~/Pictures/walls/gulf/{light,dark}`,
 `~/Pictures/walls/mclaren/{light,dark}` and
-`~/Pictures/walls/redbull/{light,dark}`.
+`~/Pictures/walls/redbull/{light,dark}`. The `01-`/`02-` prefixes in the Gulf
+tree pin `theme-set` and `wall next` order to the intended hero first.
 
 ### Contrast and transparency
 

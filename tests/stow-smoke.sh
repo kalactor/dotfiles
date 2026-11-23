@@ -107,12 +107,13 @@ grep -q 'hellwal)' "$target/.local/bin/theme-apply"
 grep -q '%%background.hex%%' "$target/.config/hellwal/templates/palette.env"
 
 # Static themes ship with pre-validated light/dark palettes and theme wallpapers.
-for theme in mclaren redbull; do
-    grep -q '^wallpaper_root=' "$target/.config/rice/themes/$theme/theme.conf"
-    grep -q '^selection_fg=' "$target/.config/rice/themes/$theme/light.env"
-    grep -q '^selection_fg=' "$target/.config/rice/themes/$theme/dark.env"
-    grep -q '^bar_danger=' "$target/.config/rice/themes/$theme/light.env"
+for theme_dir in "$target/.config/rice/themes"/*/; do
+    grep -q '^wallpaper_root=' "$theme_dir/theme.conf"
+    grep -q '^selection_fg=' "$theme_dir/light.env"
+    grep -q '^selection_fg=' "$theme_dir/dark.env"
+    grep -q '^bar_danger=' "$theme_dir/light.env"
 done
+grep -q '^name=Gulf 917' "$target/.config/rice/themes/gulf/theme.conf"
 grep -q 'theme-set' "$target/.local/bin/rice-theme"
 
 printf 'stow-smoke: all %d packages restored into an isolated HOME; numeric workspaces intact\n' "${#packages[@]}"
