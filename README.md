@@ -202,6 +202,7 @@ theme-set dune
 theme-set blade-runner-2049
 theme-set aston-martin
 theme-set brawn-gp
+theme-set bauhaus
 theme-set sumi dark
 rice-theme --list
 ```
@@ -217,13 +218,19 @@ Return to wallpaper-derived colours with an explicit engine override:
 RICE_THEME_ENGINE=hellwal wall next
 ```
 
-Eight themes ship by default:
+Nine themes ship by default:
 
 - **Aston Martini** uses British racing green `#1F5C43`/`#10231B`, ivory
   `#F3F1E6` and lime `#A3BE12`/`#C6E82E`. Light mode is ivory with a BRG bar
   and a lime selection; dark mode is emerald night with lime accents, mint
   highlights and a lime selection. Text roles use darkened olive, since lime
   is a fill colour only.
+- **Bauhaus** uses paper `#F2EFE6`, ink `#111111`, vermilion `#A8261D`,
+  ultramarine `#1F4E9C` and mustard `#E3B23C`. Light mode is paper with a
+  black bar, a mustard clock and selection, and vermilion accents; dark mode is
+  charcoal with mustard as the accent and selection plus vermilion and
+  ultramarine secondaries. Mustard is fill-only, so text roles use a darkened
+  mustard.
 - **Blade Runner 2049** uses amber `#A85115`/`#E08A2E`, teal `#24575A` and
   concrete `#EDE6DA`. Light mode is amber haze with a near-black concrete bar
   and a teal secondary; dark mode is teal rain with warm paper text and an
@@ -255,6 +262,7 @@ Eight themes ship by default:
 All palettes pass the contrast policy, and the test suite globs every
 `theme.conf` directory so a new theme is checked automatically. The
 wallpapers live in `~/Pictures/walls/aston-martin/{light,dark}`,
+`~/Pictures/walls/bauhaus/{light,dark}`,
 `~/Pictures/walls/blade-runner-2049/{light,dark}`,
 `~/Pictures/walls/brawn-gp/{light,dark}`,
 `~/Pictures/walls/dune/{light,dark}`,
@@ -262,8 +270,8 @@ wallpapers live in `~/Pictures/walls/aston-martin/{light,dark}`,
 `~/Pictures/walls/mclaren/{light,dark}`,
 `~/Pictures/walls/redbull/{light,dark}` and
 `~/Pictures/walls/sumi/{light,dark}`. The `01-`/`02-` prefixes in the Aston,
-Blade Runner, Brawn, Dune, Gulf and Sumi trees pin `theme-set` and `wall next`
-order to the intended hero first.
+Bauhaus, Blade Runner, Brawn, Dune, Gulf and Sumi trees pin `theme-set` and
+`wall next` order to the intended hero first.
 
 ### Contrast and transparency
 
