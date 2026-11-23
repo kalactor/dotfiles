@@ -204,6 +204,7 @@ theme-set aston-martin
 theme-set brawn-gp
 theme-set bauhaus
 theme-set blue-note
+theme-set vermeer
 theme-set sumi dark
 rice-theme --list
 ```
@@ -219,7 +220,7 @@ Return to wallpaper-derived colours with an explicit engine override:
 RICE_THEME_ENGINE=hellwal wall next
 ```
 
-Ten themes ship by default:
+Eleven themes ship by default:
 
 - **Aston Martini** uses British racing green `#1F5C43`/`#10231B`, ivory
   `#F3F1E6` and lime `#A3BE12`/`#C6E82E`. Light mode is ivory with a BRG bar
@@ -263,6 +264,11 @@ Ten themes ship by default:
   indigo `#2B4C6F`. Light mode is warm paper with an ink bar and vermilion
   selection; dark mode is indigo night with warm text and the same vermilion
   accent.
+- **Vermeer** uses lead white `#F1EBDD`, umber `#241C16`, ultramarine
+  `#2B4C8C` and ochre `#C99A3E`. Light mode is lead-white paper with an
+  ultramarine bar, blue accents and an ochre selection; dark mode is
+  ultramarine night with warm paper type, a gilt accent and blue secondaries.
+  Ochre is fill-only, so text roles use a darkened gilt.
 
 All palettes pass the contrast policy, and the test suite globs every
 `theme.conf` directory so a new theme is checked automatically. The
@@ -275,8 +281,9 @@ wallpapers live in `~/Pictures/walls/aston-martin/{light,dark}`,
 `~/Pictures/walls/gulf/{light,dark}`,
 `~/Pictures/walls/mclaren/{light,dark}`,
 `~/Pictures/walls/redbull/{light,dark}` and
-`~/Pictures/walls/sumi/{light,dark}`. The `01-`/`02-` prefixes in the Aston,
-Bauhaus, Blade Runner, Blue Note, Brawn, Dune, Gulf and Sumi trees pin
+`~/Pictures/walls/sumi/{light,dark}` and
+`~/Pictures/walls/vermeer/{light,dark}`. The `01-`/`02-` prefixes in the Aston,
+Bauhaus, Blade Runner, Blue Note, Brawn, Dune, Gulf, Sumi and Vermeer trees pin
 `theme-set` and `wall next` order to the intended hero first.
 
 ### Contrast and transparency
