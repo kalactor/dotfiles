@@ -201,6 +201,7 @@ theme-set sumi
 theme-set dune
 theme-set blade-runner-2049
 theme-set aston-martin
+theme-set brawn-gp
 theme-set sumi dark
 rice-theme --list
 ```
@@ -216,7 +217,7 @@ Return to wallpaper-derived colours with an explicit engine override:
 RICE_THEME_ENGINE=hellwal wall next
 ```
 
-Seven themes ship by default:
+Eight themes ship by default:
 
 - **Aston Martini** uses British racing green `#1F5C43`/`#10231B`, ivory
   `#F3F1E6` and lime `#A3BE12`/`#C6E82E`. Light mode is ivory with a BRG bar
@@ -227,6 +228,11 @@ Seven themes ship by default:
   concrete `#EDE6DA`. Light mode is amber haze with a near-black concrete bar
   and a teal secondary; dark mode is teal rain with warm paper text and an
   amber accent.
+- **Brawn GP** uses white `#F7F7F2`, black `#111111` and radioactive
+  chartreuse `#C6F000`/`#536400`. Light mode is white paper with a black bar,
+  a chartreuse clock and a chartreuse selection; dark mode is black carbon with
+  chartreuse accents and selection. Chartreuse is a fill colour only; the
+  cursor and accent text use darkened chartreuse.
 - **Dune** uses sand `#EFE3D0`, copper `#A94A1B` and petrol `#2F5D5A`. Light
   mode keeps warm paper with a coffee bar and a copper selection; dark mode is
   desert night with sand text, copper accents and a petrol-teal secondary.
@@ -250,13 +256,14 @@ All palettes pass the contrast policy, and the test suite globs every
 `theme.conf` directory so a new theme is checked automatically. The
 wallpapers live in `~/Pictures/walls/aston-martin/{light,dark}`,
 `~/Pictures/walls/blade-runner-2049/{light,dark}`,
+`~/Pictures/walls/brawn-gp/{light,dark}`,
 `~/Pictures/walls/dune/{light,dark}`,
 `~/Pictures/walls/gulf/{light,dark}`,
 `~/Pictures/walls/mclaren/{light,dark}`,
 `~/Pictures/walls/redbull/{light,dark}` and
 `~/Pictures/walls/sumi/{light,dark}`. The `01-`/`02-` prefixes in the Aston,
-Blade Runner, Dune, Gulf and Sumi trees pin `theme-set` and `wall next` order
-to the intended hero first.
+Blade Runner, Brawn, Dune, Gulf and Sumi trees pin `theme-set` and `wall next`
+order to the intended hero first.
 
 ### Contrast and transparency
 
