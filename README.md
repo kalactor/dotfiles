@@ -196,9 +196,12 @@ chooses from that theme's wallpaper tree instead of
 `~/Pictures/walls/{light,dark}`.
 
 Each palette also carries bar-safe status colours (`bar_danger`,
-`bar_success`, `bar_warning`, `bar_info`, `bar_accent_alt`) derived against
-`bar_bg`, so recorder, VPN, DND and power-profile icons stay readable even
-when the bar is a saturated brand colour.
+`bar_success`, `bar_warning`, `bar_info`, `bar_accent`, `bar_accent_alt`)
+derived against `bar_bg`, so recorder, VPN, DND and power-profile icons stay
+readable. Light modes use a light tinted bar with dark text; dark modes use a
+dark bar with light text. The clock and status icons use `bar_accent`, which
+keeps the theme accent while staying validated against `bar_bg` rather than
+`selection_bg`.
 
 Press **`Super+Shift+T`** for the rofi theme picker, or apply a theme directly:
 
@@ -233,56 +236,58 @@ RICE_THEME_ENGINE=hellwal wall next
 Twelve themes ship by default:
 
 - **Aston Martini** uses British racing green `#1F5C43`/`#10231B`, ivory
-  `#F3F1E6` and lime `#A3BE12`/`#C6E82E`. Light mode is ivory with a BRG bar
-  and a lime selection; dark mode is emerald night with lime accents, mint
-  highlights and a lime selection. Text roles use darkened olive, since lime
-  is a fill colour only.
+  `#F3F1E6` and lime `#A3BE12`/`#C6E82E`. Light mode is ivory with a light
+  sage bar, BRG accents and a lime selection; dark mode is emerald night with
+  lime accents, mint highlights and a lime selection. Text roles use darkened
+  olive, since lime is a fill colour only.
 - **Bauhaus** uses paper `#F2EFE6`, ink `#111111`, vermilion `#A8261D`,
   ultramarine `#1F4E9C` and mustard `#E3B23C`. Light mode is paper with a
-  black bar, a mustard clock and selection, and vermilion accents; dark mode is
+  light blush bar, vermilion accents and a mustard selection; dark mode is
   charcoal with mustard as the accent and selection plus vermilion and
   ultramarine secondaries. Mustard is fill-only, so text roles use a darkened
   mustard.
 - **Blade Runner 2049** uses amber `#A85115`/`#E08A2E`, teal `#24575A` and
-  concrete `#EDE6DA`. Light mode is amber haze with a near-black concrete bar
-  and a teal secondary; dark mode is teal rain with warm paper text and an
-  amber accent.
+  concrete `#EDE6DA`. Light mode is amber haze with a warm concrete bar,
+  amber accents and a teal secondary; dark mode is teal rain with warm paper
+  text and an amber accent.
 - **Blue Note** uses midnight `#0E1B2A`/`#0B1420`, cream `#EFE6D2`, burnt
   orange `#D2601A` and muted teal `#2F6F6A`. Light mode is cream paper with a
-  midnight bar, burnt-orange accents and a teal secondary; dark mode is navy
-  night with cream type, orange accents and a teal highlight.
+  light peach bar, burnt-orange accents and a teal secondary; dark mode is
+  navy night with cream type, orange accents and a teal highlight.
 - **Brawn GP** uses white `#F7F7F2`, black `#111111` and radioactive
-  chartreuse `#C6F000`/`#536400`. Light mode is white paper with a black bar,
-  a chartreuse clock and a chartreuse selection; dark mode is black carbon with
-  chartreuse accents and selection. Chartreuse is a fill colour only; the
+  chartreuse `#C6F000`/`#536400`. Light mode is white paper with a pale green
+  bar, olive accents and a chartreuse selection; dark mode is black carbon
+  with chartreuse accents and selection. Chartreuse is a fill colour only; the
   cursor and accent text use darkened chartreuse.
 - **Dune** uses sand `#EFE3D0`, copper `#A94A1B` and petrol `#2F5D5A`. Light
-  mode keeps warm paper with a coffee bar and a copper selection; dark mode is
-  desert night with sand text, copper accents and a petrol-teal secondary.
+  mode keeps warm paper with a sand bar, copper accents and a copper
+  selection; dark mode is desert night with sand text, copper accents and a
+  petrol-teal secondary.
 - **Gruvbox** uses cream `#FBF1C7`, charcoal `#282828`, burnt orange
   `#AF3A03`/`#FE8019`, mustard `#D79921`/`#FABD2F` and olive/teal
-  secondaries. Light mode is cream paper with a charcoal bar, an orange
+  secondaries. Light mode is cream paper with a warm cream bar, an orange
   accent and a mustard selection; dark mode is charcoal with warm cream type,
   an orange accent and a mustard selection. In light mode mustard is
   fill-only, so text roles use a darkened mustard.
 - **Gulf 917** uses Le Mans powder blue `#6E9DB5`, Gulf orange `#E8752B` and
-  warm paper `#F4F1EA`. Light mode has a petrol-ink bar with an orange
-  selection and clock plus a powder-blue secondary; dark mode moves to a
+  warm paper `#F4F1EA`. Light mode has a powder-blue-tinted bar, an orange
+  selection and accents, plus a powder-blue secondary; dark mode moves to a
   night-stint petrol bar with orange selection and powder-blue accents.
 - **McLaren F1** uses papaya `#FF8000` with carbon `#17171A` and anthracite
-  surfaces. Light mode keeps the papaya bar with a carbon selection and clock;
-  dark mode flips to a carbon bar with papaya selection and chrome highlights.
+  surfaces. Light mode uses a pale papaya bar with a carbon selection and
+  papaya accents; dark mode flips to a carbon bar with papaya selection and
+  chrome highlights.
 - **Red Bull Racing** uses navy `#121F45`, race red `#C8102E`/`#E8002D` and
-  yellow `#FFCC00`. Light mode has a navy bar with a yellow selection and
-  clock plus a livery-blue secondary; dark mode has a navy-carbon bar with a
-  red selection and clock and yellow secondary accents.
+  yellow `#FFCC00`. Light mode has a silver bar with red accents, a yellow
+  selection and a livery-blue secondary; dark mode has a navy-carbon bar with
+  a red selection and yellow secondary accents.
 - **Sumi** uses washi `#F4EFE5`, sumi ink `#1A1A1A`, vermilion `#C63A2B` and
-  indigo `#2B4C6F`. Light mode is warm paper with an ink bar and vermilion
-  selection; dark mode is indigo night with warm text and the same vermilion
-  accent.
+  indigo `#2B4C6F`. Light mode is warm paper with a light washi bar,
+  vermilion accents and a vermilion selection; dark mode is indigo night with
+  warm text and the same vermilion accent.
 - **Vermeer** uses lead white `#F1EBDD`, umber `#241C16`, ultramarine
-  `#2B4C8C` and ochre `#C99A3E`. Light mode is lead-white paper with an
-  ultramarine bar, blue accents and an ochre selection; dark mode is
+  `#2B4C8C` and ochre `#C99A3E`. Light mode is lead-white paper with a pale
+  lead-white bar, ultramarine accents and an ochre selection; dark mode is
   ultramarine night with warm paper type, a gilt accent and blue secondaries.
   Ochre is fill-only, so text roles use a darkened gilt.
 

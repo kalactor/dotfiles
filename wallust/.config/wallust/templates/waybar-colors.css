@@ -5,6 +5,7 @@
 @define-color surface_alt {{surface_alt}};
 @define-color bar_bg {{bar_bg}};
 @define-color bar_fg {{bar_fg}};
+@define-color bar_accent {{bar_accent}};
 @define-color bar_accent_alt {{bar_accent_alt}};
 @define-color bar_danger {{bar_danger}};
 @define-color bar_success {{bar_success}};

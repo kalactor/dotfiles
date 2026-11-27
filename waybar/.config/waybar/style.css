@@ -97,8 +97,8 @@ button:hover {
 
 #workspaces button:hover {
     opacity: 1;
-    color: @selection_bg;
-    background: alpha(@selection_bg, 0.15);
+    color: @bar_accent;
+    background: alpha(@bar_accent, 0.15);
     border-radius: 99px;
 }
 
@@ -128,7 +128,7 @@ button:hover {
 /* Light/dark mode indicator: click toggles, right-click returns to auto */
 #custom-mode {
     font-size: 14px;
-    color: @selection_bg;
+    color: @bar_accent;
 }
 
 #custom-mode.dark {
@@ -141,7 +141,7 @@ button:hover {
 }
 
 #custom-tempmail.has-mail {
-    color: @selection_bg;
+    color: @bar_accent;
 }
 
 #custom-tempmail.error {
@@ -155,12 +155,12 @@ button:hover {
 
 /* SwayNC states: count and DND at a glance. */
 #custom-notification.notification {
-    color: @selection_bg;
+    color: @bar_accent;
 }
 
 #custom-notification.dnd-notification,
 #custom-notification.dnd-inhibited-notification {
-    color: @bar_accent_alt;
+    color: @bar_accent;
 }
 
 #custom-notification.inhibited-notification {
@@ -229,7 +229,7 @@ button:hover {
 }
 
 #power-profiles-daemon.performance {
-    color: @selection_bg;
+    color: @bar_accent;
 }
 
 #power-profiles-daemon.balanced {
@@ -241,11 +241,11 @@ button:hover {
 }
 
 #custom-updates.has-updates {
-    color: @selection_bg;
+    color: @bar_accent;
 }
 
 #clock {
-    color: @selection_bg;
+    color: @bar_accent;
 }
 
 /* The date half of the clock keeps the normal bar text colour. */

@@ -202,6 +202,18 @@ class PaletteTests(unittest.TestCase):
                     [],
                     f"{theme} {mode} static palette regressed",
                 )
+                if mode == "light":
+                    self.assertGreater(
+                        self.rc.rel_lum(palette["bar_bg"]),
+                        0.5,
+                        f"{theme} light bar should be light",
+                    )
+                else:
+                    self.assertLess(
+                        self.rc.rel_lum(palette["bar_bg"]),
+                        0.1,
+                        f"{theme} dark bar should be dark",
+                    )
 
     def test_trusted_palette_is_not_adjusted(self):
         source = (

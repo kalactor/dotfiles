@@ -54,6 +54,7 @@ STATIC_REQUIRED_KEYS = (
         "surface_fg",
         "bar_bg",
         "bar_fg",
+        "bar_accent",
         "bar_accent_alt",
         "bar_danger",
         "bar_success",
@@ -297,6 +298,7 @@ def palette_text(palette: dict[str, str], trusted: bool = False) -> str:
             "surface_fg",
             "bar_bg",
             "bar_fg",
+            "bar_accent",
             "bar_accent_alt",
             "bar_danger",
             "bar_success",
@@ -455,6 +457,7 @@ def compute_palette(
     palette["link"] = adjust(base.get("link", palette["color4"]), effective_background, ANSI_TARGET)
     # Bar-safe status colours: the bar is often a saturated brand colour, so
     # the surface status colours above cannot be used as bar text directly.
+    palette["bar_accent"] = adjust(palette["accent"], palette["bar_bg"], ANSI_TARGET)
     for role in ("accent_alt", "danger", "success", "warning", "info"):
         palette[f"bar_{role}"] = adjust(palette[role], palette["bar_bg"], ANSI_TARGET)
     palette["selection_bg"] = palette["accent"]
@@ -488,7 +491,7 @@ def check_palette(palette: dict[str, str], effective_background: str | None = No
         need(name, palette[name], background, ANSI_TARGET)
     for name in ("accent", "accent_alt", "danger", "success", "warning"):
         need(f"{name} text", palette[f"{name}_fg"], palette[name], ANSI_TARGET)
-    for name in ("accent_alt", "danger", "success", "warning", "info"):
+    for name in ("accent", "accent_alt", "danger", "success", "warning", "info"):
         need(f"bar {name}", palette[f"bar_{name}"], palette["bar_bg"], ANSI_TARGET)
     need("selection text", palette["selection_fg"], palette["selection_bg"], ANSI_TARGET)
     return failures
@@ -517,7 +520,7 @@ def check_report(
         add(name, palette[name], ANSI_TARGET)
     for name in ("accent", "accent_alt", "danger", "success", "warning"):
         add(f"{name} text", palette[f"{name}_fg"], ANSI_TARGET, palette[name])
-    for name in ("accent_alt", "danger", "success", "warning", "info"):
+    for name in ("accent", "accent_alt", "danger", "success", "warning", "info"):
         add(f"bar {name}", palette[f"bar_{name}"], ANSI_TARGET, palette["bar_bg"])
     add("selection", palette["selection_fg"], ANSI_TARGET, palette["selection_bg"])
     return rows
