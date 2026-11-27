@@ -47,6 +47,7 @@ alias grep='grep --color=auto'
 alias ll='eza -lh --icons --group-directories-first'
 alias la='eza -lah --icons --group-directories-first'
 alias lt='eza --tree --level=2 --icons'
+alias csv='csvlens'
 
 # fnm
 if command -v fnm >/dev/null 2>&1; then
