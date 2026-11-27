@@ -5,7 +5,6 @@ PreviewSize=16
 ExpandableFolders=false
 IconSize=32
 LeftPadding=8
-PreviewSize=32
 RightPadding=8
 UseSystemFont=true
 
@@ -24,7 +23,7 @@ Version=202
 CompactSpacing=true
 IconSize=80
 MaximumTextLines=1
-PreviewSize=80
+PreviewSize=112
 
 [InformationPanel]
 dateFormat=ShortFormat
