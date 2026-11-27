@@ -213,6 +213,7 @@ theme-set aston-martin
 theme-set brawn-gp
 theme-set bauhaus
 theme-set blue-note
+theme-set gruvbox
 theme-set vermeer
 theme-set sumi dark
 rice-theme --list
@@ -229,7 +230,7 @@ Return to wallpaper-derived colours with an explicit engine override:
 RICE_THEME_ENGINE=hellwal wall next
 ```
 
-Eleven themes ship by default:
+Twelve themes ship by default:
 
 - **Aston Martini** uses British racing green `#1F5C43`/`#10231B`, ivory
   `#F3F1E6` and lime `#A3BE12`/`#C6E82E`. Light mode is ivory with a BRG bar
@@ -258,6 +259,12 @@ Eleven themes ship by default:
 - **Dune** uses sand `#EFE3D0`, copper `#A94A1B` and petrol `#2F5D5A`. Light
   mode keeps warm paper with a coffee bar and a copper selection; dark mode is
   desert night with sand text, copper accents and a petrol-teal secondary.
+- **Gruvbox** uses cream `#FBF1C7`, charcoal `#282828`, burnt orange
+  `#AF3A03`/`#FE8019`, mustard `#D79921`/`#FABD2F` and olive/teal
+  secondaries. Light mode is cream paper with a charcoal bar, an orange
+  accent and a mustard selection; dark mode is charcoal with warm cream type,
+  an orange accent and a mustard selection. In light mode mustard is
+  fill-only, so text roles use a darkened mustard.
 - **Gulf 917** uses Le Mans powder blue `#6E9DB5`, Gulf orange `#E8752B` and
   warm paper `#F4F1EA`. Light mode has a petrol-ink bar with an orange
   selection and clock plus a powder-blue secondary; dark mode moves to a
@@ -287,13 +294,15 @@ wallpapers live in `~/Pictures/walls/aston-martin/{light,dark}`,
 `~/Pictures/walls/blue-note/{light,dark}`,
 `~/Pictures/walls/brawn-gp/{light,dark}`,
 `~/Pictures/walls/dune/{light,dark}`,
+`~/Pictures/walls/gruvbox/{light,dark}`,
 `~/Pictures/walls/gulf/{light,dark}`,
 `~/Pictures/walls/mclaren/{light,dark}`,
 `~/Pictures/walls/redbull/{light,dark}` and
 `~/Pictures/walls/sumi/{light,dark}` and
 `~/Pictures/walls/vermeer/{light,dark}`. The `01-`/`02-` prefixes in the Aston,
-Bauhaus, Blade Runner, Blue Note, Brawn, Dune, Gulf, Sumi and Vermeer trees pin
-`theme-set` and `wall next` order to the intended hero first.
+Bauhaus, Blade Runner, Blue Note, Brawn, Dune, Gruvbox, Gulf, Sumi and
+Vermeer trees pin `theme-set` and `wall next` order to the intended hero
+first.
 
 ### Contrast and transparency
 

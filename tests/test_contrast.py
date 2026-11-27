@@ -179,7 +179,18 @@ class PaletteTests(unittest.TestCase):
             path.name for path in themes_root.iterdir() if (path / "theme.conf").is_file()
         )
         self.assertTrue(
-            {"gulf", "sumi", "dune", "blade-runner-2049", "aston-martin", "brawn-gp", "bauhaus", "blue-note", "vermeer"}
+            {
+                "gulf",
+                "sumi",
+                "dune",
+                "blade-runner-2049",
+                "aston-martin",
+                "brawn-gp",
+                "bauhaus",
+                "blue-note",
+                "vermeer",
+                "gruvbox",
+            }
             <= set(themes)
         )
         for theme in themes:
