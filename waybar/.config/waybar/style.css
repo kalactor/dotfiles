@@ -113,6 +113,7 @@ button:hover {
 #custom-weather,
 #custom-mode,
 #custom-tempmail,
+#custom-password,
 #custom-notification,
 #custom-seed4,
 #custom-updates,
@@ -145,6 +146,11 @@ button:hover {
 
 #custom-tempmail.error {
     color: @red;
+}
+
+/* Password generator: quiet, one click away. */
+#custom-password {
+    color: alpha(@fg, 0.6);
 }
 
 /* SwayNC states: count and DND at a glance. */

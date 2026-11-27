@@ -1,0 +1,364 @@
+#!/usr/bin/env python3
+"""
+passgen-waybar - random password generator for the Waybar bar
+
+Left click  : generate a password with the saved options and copy it
+Right click : choose character sets and length with rofi
+
+Passwords are generated with the secrets module and are never written to disk.
+Only the options live in ~/.local/state/passgen-waybar/options.json (0600).
+"""
+
+from __future__ import annotations
+
+import html
+import json
+import os
+import secrets
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+CLASSES = ("lower", "upper", "digits", "symbols")
+SETS = {
+    "lower": "abcdefghijklmnopqrstuvwxyz",
+    "upper": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    "digits": "0123456789",
+    # Shell-hostile characters (quotes, backslash, pipe, backtick, <>) are
+    # deliberately left out so a pasted password is safe in a terminal.
+    "symbols": "!@#$%^&*()-_=+[]{};:,.?",
+}
+LABELS = {
+    "lower": "Lowercase (a-z)",
+    "upper": "Uppercase (A-Z)",
+    "digits": "Digits (0-9)",
+    "symbols": "Symbols (!@#$%^&*...)",
+}
+DEFAULTS = {"length": 12, "lower": True, "upper": True, "digits": True, "symbols": True}
+MIN_LENGTH = 4
+MAX_LENGTH = 64
+
+STATE_HOME = Path(
+    os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state")
+) / "passgen-waybar"
+STATE_FILE = STATE_HOME / "options.json"
+
+
+# --------------------------------------------------------------- options
+
+
+def default_options() -> dict:
+    return dict(DEFAULTS)
+
+
+def normalise(raw: object) -> dict:
+    """Return a usable options dict, falling back for missing/bad values."""
+    options = default_options()
+    if isinstance(raw, dict):
+        for name in CLASSES:
+            if isinstance(raw.get(name), bool):
+                options[name] = raw[name]
+        try:
+            length = int(raw.get("length"))  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            pass
+        else:
+            options["length"] = max(MIN_LENGTH, min(MAX_LENGTH, length))
+    if not any(options[name] for name in CLASSES):
+        return default_options()
+    # Every enabled set contributes one guaranteed character.
+    options["length"] = max(options["length"], sum(options[name] for name in CLASSES))
+    return options
+
+
+def ensure_dirs() -> None:
+    STATE_HOME.mkdir(parents=True, exist_ok=True, mode=0o700)
+
+
+def load_options() -> dict:
+    try:
+        with STATE_FILE.open("r", encoding="utf-8") as handle:
+            return normalise(json.load(handle))
+    except (OSError, ValueError):
+        return default_options()
+
+
+def save_options(options: dict) -> None:
+    options = normalise(options)
+    ensure_dirs()
+    temporary = STATE_FILE.with_suffix(".tmp")
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            json.dump(options, handle, indent=2)
+            handle.write("\n")
+    finally:
+        os.replace(temporary, STATE_FILE)
+
+
+# ------------------------------------------------------------- passwords
+
+
+def generate_password(options: dict | None = None) -> str:
+    options = normalise(options or default_options())
+    enabled = [name for name in CLASSES if options[name]]
+    if not enabled:
+        raise ValueError("select at least one character set")
+    length = int(options["length"])
+    if length < len(enabled):
+        raise ValueError("length is too short for the selected character sets")
+
+    characters = [secrets.choice(SETS[name]) for name in enabled]
+    pool = "".join(SETS[name] for name in enabled)
+    characters.extend(secrets.choice(pool) for _ in range(length - len(enabled)))
+    secrets.SystemRandom().shuffle(characters)
+    return "".join(characters)
+
+
+def summary(options: dict) -> str:
+    return ", ".join(name for name in CLASSES if options[name])
+
+
+# --------------------------------------------------------------- desktop
+
+
+def clip(text: str) -> bool:
+    for tool, arguments in (
+        ("wl-copy", []),
+        ("xclip", ["-selection", "clipboard"]),
+        ("xsel", ["-b", "-i"]),
+    ):
+        if not shutil.which(tool):
+            continue
+        try:
+            subprocess.run(
+                [tool, *arguments], input=text, text=True, timeout=5, check=True
+            )
+            return True
+        except (OSError, subprocess.SubprocessError):
+            continue
+    return False
+
+
+def clipboard_tool() -> str | None:
+    for tool in ("wl-copy", "xclip", "xsel"):
+        if shutil.which(tool):
+            return tool
+    return None
+
+
+def notify(title: str, body: str, urgency: str = "normal") -> None:
+    if not shutil.which("notify-send"):
+        return
+    subprocess.run(
+        [
+            "notify-send", "-a", "Password", "-i", "dialog-password",
+            "-u", urgency, "-t", "5000", title, body,
+        ],
+        check=False,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+
+def signal_waybar() -> None:
+    if shutil.which("pkill"):
+        subprocess.run(["pkill", "-RTMIN+9", "-x", "waybar"], check=False)
+
+
+# ---------------------------------------------------------------- rofi
+
+
+def rofi_choose(lines: list[str], prompt: str) -> str | None:
+    if not shutil.which("rofi"):
+        notify("Rofi is missing", "Install rofi to change password options.", urgency="critical")
+        return None
+    try:
+        result = subprocess.run(
+            [
+                "rofi", "-dmenu", "-i", "-p", prompt,
+                "-theme-str", "window { width: 38%; } listview { lines: 8; }",
+            ],
+            input="\n".join(lines),
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        notify("Password options failed", str(error), urgency="critical")
+        return None
+    if result.returncode != 0:
+        return None
+    return result.stdout.rstrip("\n") or None
+
+
+def rofi_input(prompt: str, initial: str) -> str | None:
+    if not shutil.which("rofi"):
+        return None
+    try:
+        result = subprocess.run(
+            ["rofi", "-dmenu", "-p", prompt, "-filter", initial],
+            input="",
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip() or None
+
+
+def options_menu() -> int:
+    options = load_options()
+    password = ""
+    while True:
+        generate_line = f"Generate password ({options['length']} characters)"
+        length_line = f"Length: {options['length']}"
+        reset_line = "Reset to defaults"
+        actions: dict[str, tuple[str, str | None]] = {
+            generate_line: ("generate", None),
+            length_line: ("length", None),
+            reset_line: ("reset", None),
+        }
+        lines = [generate_line]
+        for name in CLASSES:
+            mark = "x" if options[name] else " "
+            line = f"[{mark}] {LABELS[name]}"
+            lines.append(line)
+            actions[line] = ("toggle", name)
+        lines += [length_line, reset_line]
+
+        choice = rofi_choose(lines, "Password")
+        if choice is None:
+            return 0
+        action, name = actions.get(choice, (None, None))
+
+        if action == "generate":
+            try:
+                password = generate_password(options)
+            except ValueError as error:
+                notify("Cannot generate", str(error), urgency="critical")
+                continue
+            break
+
+        if action == "length":
+            answer = rofi_input(f"Length ({MIN_LENGTH}-{MAX_LENGTH})", str(options["length"]))
+            if answer is None:
+                continue
+            try:
+                length = int(answer)
+            except ValueError:
+                notify("Invalid length", f"Enter a number from {MIN_LENGTH} to {MAX_LENGTH}.")
+                continue
+            if not MIN_LENGTH <= length <= MAX_LENGTH:
+                notify("Invalid length", f"Enter a number from {MIN_LENGTH} to {MAX_LENGTH}.")
+                continue
+            enabled = sum(options[name] for name in CLASSES)
+            if length < enabled:
+                notify("Length too short", f"Keep at least {enabled} characters for these sets.")
+                continue
+            options["length"] = length
+            save_options(options)
+            signal_waybar()
+            continue
+
+        if action == "toggle" and name:
+            if options[name] and sum(options[item] for item in CLASSES) == 1:
+                notify("Keep one character set", "At least one must stay enabled.")
+                continue
+            options[name] = not options[name]
+            save_options(options)
+            signal_waybar()
+            continue
+
+        if action == "reset":
+            options = default_options()
+            save_options(options)
+            signal_waybar()
+            continue
+
+    if clip(password):
+        notify(
+            "Password copied",
+            f"{len(password)} characters · {summary(options)}",
+            urgency="low",
+        )
+        return 0
+    notify("Copy failed", "Install wl-clipboard, xclip or xsel.", urgency="critical")
+    return 1
+
+
+# -------------------------------------------------------------- commands
+
+
+def tooltip(options: dict) -> str:
+    lines = [
+        "<b>Random password</b>",
+        "",
+        f"Length: {options['length']}",
+        f"Sets: {html.escape(summary(options))}",
+    ]
+    if not clipboard_tool():
+        lines += ["", "⚠ No clipboard tool (install wl-clipboard)"]
+    lines += ["", "Left: generate &amp; copy", "Right: change options"]
+    return "\n".join(lines)
+
+
+def cmd_status() -> int:
+    options = load_options()
+    print(
+        json.dumps(
+            {"text": "󰌾", "tooltip": tooltip(options), "class": "ready"},
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
+    return 0
+
+
+def cmd_new() -> int:
+    options = load_options()
+    try:
+        password = generate_password(options)
+    except ValueError as error:
+        notify("Cannot generate", str(error), urgency="critical")
+        return 1
+    if clip(password):
+        notify(
+            "Password copied",
+            f"{len(password)} characters · {summary(options)}",
+            urgency="low",
+        )
+        return 0
+    notify("Copy failed", "Install wl-clipboard, xclip or xsel.", urgency="critical")
+    return 1
+
+
+def cmd_print() -> int:
+    try:
+        print(generate_password())
+    except ValueError as error:
+        print(f"passgen-waybar: {error}", file=sys.stderr)
+        return 1
+    return 0
+
+
+def main(argv: list[str]) -> int:
+    command = argv[1] if len(argv) > 1 else "new"
+    if command == "status":
+        return cmd_status()
+    if command == "new":
+        return cmd_new()
+    if command == "options":
+        return options_menu()
+    if command == "print":
+        return cmd_print()
+    print(__doc__.strip())
+    return 0 if command in {"help", "--help", "-h"} else 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

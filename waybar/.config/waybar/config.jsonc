@@ -25,6 +25,7 @@
   "modules-right": [
     "custom/mode",
     "custom/tempmail",
+    "custom/password",
     "custom/notification",
     "pulseaudio",
     "network",
@@ -95,6 +96,15 @@
     "on-click": "$HOME/.local/bin/tempmail-waybar copy",
     "on-click-middle": "$HOME/.local/bin/tempmail-waybar change",
     "on-click-right": "$HOME/.local/bin/tempmail-waybar open"
+  },
+
+  // Random password: left generates and copies, right configures the sets
+  "custom/password": {
+    "exec": "$HOME/.local/bin/passgen-waybar status",
+    "return-type": "json",
+    "signal": 9,
+    "on-click": "$HOME/.local/bin/passgen-waybar new",
+    "on-click-right": "$HOME/.local/bin/passgen-waybar options"
   },
 
   "custom/notification": {

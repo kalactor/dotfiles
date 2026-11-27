@@ -85,6 +85,15 @@ best-effort: when the service is unreachable the icon turns red and the
 tooltip carries the reason. Drop `custom/tempmail` from `modules-right` to
 disable it.
 
+The Waybar password module ships in `bin/.local/bin/passgen-waybar`. Left
+click generates a password from the saved options and copies it with
+`wl-copy` (`xclip`/`xsel` fallback); right click opens a rofi menu to toggle
+lowercase, uppercase, digits and symbols and to set the length (4–64). The
+default is 12 characters with every set enabled. Preferences live in
+`~/.local/state/passgen-waybar/options.json` (mode `0600`); passwords use
+`secrets` and are never written to disk or shown in notifications.
+`passgen-waybar print` writes one password to stdout without copying it.
+
 `theme-apply` seeds Dolphin's global Details view on first run (stored in an
 xattr); it never overwrites a view mode you have already chosen.
 

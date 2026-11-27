@@ -37,6 +37,7 @@ for path in \
     .local/bin/rice-contrast \
     .local/bin/theme-set \
     .local/bin/rice-theme \
+    .local/bin/passgen-waybar \
     .local/share/rice/telegram-base.tdesktop-palette \
     .config/systemd/user/rice-sun.timer \
     .zshrc \
@@ -62,6 +63,7 @@ for workspace in $(seq 1 10); do
 done
 grep -q 'rice-screenshot' "$target/.config/hypr/binds.lua"
 grep -q '"custom/notification"' "$target/.config/waybar/config.jsonc"
+grep -q '"custom/password"' "$target/.config/waybar/config.jsonc"
 
 # Satty must float, and OCR must stay off the workspace-number row.
 grep -Fq 'com\\.gabm\\.satty' "$target/.config/hypr/rules.lua"
