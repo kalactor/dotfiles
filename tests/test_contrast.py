@@ -190,6 +190,7 @@ class PaletteTests(unittest.TestCase):
                 "blue-note",
                 "vermeer",
                 "gruvbox",
+                "syntax",
             }
             <= set(themes)
         )

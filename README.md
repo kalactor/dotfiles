@@ -217,6 +217,7 @@ theme-set brawn-gp
 theme-set bauhaus
 theme-set blue-note
 theme-set gruvbox
+theme-set syntax
 theme-set vermeer
 theme-set sumi dark
 rice-theme --list
@@ -233,7 +234,7 @@ Return to wallpaper-derived colours with an explicit engine override:
 RICE_THEME_ENGINE=hellwal wall next
 ```
 
-Twelve themes ship by default:
+Thirteen themes ship by default:
 
 - **Aston Martini** uses British racing green `#1F5C43`/`#10231B`, ivory
   `#F3F1E6` and lime `#A3BE12`/`#C6E82E`. Light mode is ivory with a light
@@ -285,6 +286,14 @@ Twelve themes ship by default:
   indigo `#2B4C6F`. Light mode is warm paper with a light washi bar,
   vermilion accents and a vermilion selection; dark mode is indigo night with
   warm text and the same vermilion accent.
+- **Syntax** uses daylight editor paper `#F6F8FA`, ink `#24292F`, keyword
+  blue `#0969DA`/`#61AFEF`, function violet `#804DDC`/`#C678DD`, string green
+  `#187D36`/`#98C379` and amber `#946200`/`#E5C07B`. Light mode is cool
+  editor paper with a pale blue-grey bar, blue accents and a blue selection;
+  dark mode is editor charcoal with cyan-blue keywords, violet functions and
+  green strings. The wallpapers move from a daylight hacker session and a
+  1970s punch card to a syntax-highlighted code close-up and a Void Linux
+  terminal.
 - **Vermeer** uses lead white `#F1EBDD`, umber `#241C16`, ultramarine
   `#2B4C8C` and ochre `#C99A3E`. Light mode is lead-white paper with a pale
   lead-white bar, ultramarine accents and an ochre selection; dark mode is
@@ -303,10 +312,11 @@ wallpapers live in `~/Pictures/walls/aston-martin/{light,dark}`,
 `~/Pictures/walls/gulf/{light,dark}`,
 `~/Pictures/walls/mclaren/{light,dark}`,
 `~/Pictures/walls/redbull/{light,dark}` and
-`~/Pictures/walls/sumi/{light,dark}` and
+`~/Pictures/walls/sumi/{light,dark}`,
+`~/Pictures/walls/syntax/{light,dark}` and
 `~/Pictures/walls/vermeer/{light,dark}`. The `01-`/`02-` prefixes in the Aston,
-Bauhaus, Blade Runner, Blue Note, Brawn, Dune, Gruvbox, Gulf, Sumi and
-Vermeer trees pin `theme-set` and `wall next` order to the intended hero
+Bauhaus, Blade Runner, Blue Note, Brawn, Dune, Gruvbox, Gulf, Sumi, Syntax
+and Vermeer trees pin `theme-set` and `wall next` order to the intended hero
 first.
 
 ### Contrast and transparency
