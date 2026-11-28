@@ -291,9 +291,8 @@ Thirteen themes ship by default:
   `#187D36`/`#98C379` and amber `#946200`/`#E5C07B`. Light mode is cool
   editor paper with a pale blue-grey bar, blue accents and a blue selection;
   dark mode is editor charcoal with cyan-blue keywords, violet functions and
-  green strings. The wallpapers move from a daylight hacker session and a
-  1970s punch card to a syntax-highlighted code close-up and a Void Linux
-  terminal.
+  green strings. Both modes pair an abstract syntax-highlighted code block
+  with a typographic brace frame, so the wallpaper stays calm behind windows.
 - **Vermeer** uses lead white `#F1EBDD`, umber `#241C16`, ultramarine
   `#2B4C8C` and ochre `#C99A3E`. Light mode is lead-white paper with a pale
   lead-white bar, ultramarine accents and an ochre selection; dark mode is
